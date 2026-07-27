@@ -21,6 +21,17 @@ Drag the ⠿ handle to reorder a credit, including across sections.
 widths by hand, or move the text slider in the preview bar to set the size. Each switches
 the matching checkbox off; tick it again to hand control back.
 
+**Design** — five presets (Classic, Slate, Warm, Noir, Plain), then paper, text and accent
+colour pickers to go your own way. Everything else in the palette — body text, the faint
+legend, the rules, the surround behind the sheet — is derived from paper and text, so a
+hand-picked pair stays coherent instead of clashing. Two structural tweaks sit alongside:
+the weight of the rule under your name (hairline, rule, bold) and whether the section
+dividers show. Picking any preset value by hand just drops you into "custom"; nothing locks.
+
+The look travels with the CV: it is written into the export and read back on import.
+Noir prints only if you tick **Background graphics** in the print dialogue — the app says
+so when the paper is dark.
+
 **Logo** — there is no logo to start with. It arrives one of two ways: importing a CV
 lifts the lockup image out of that file, or **Upload…** takes a PNG, JPG or SVG from your
 machine. It prints 15px tall at the top right, so keep the file small (512KB ceiling —

@@ -42,6 +42,32 @@ input{font:inherit;color:inherit}
 .in{width:100%;border:1px solid var(--line);border-radius:5px;padding:6px 7px;background:#fff;font-size:12.5px}
 .in:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 2px rgba(20,20,15,.08)}
 
+.presets{display:flex;gap:7px;flex-wrap:wrap;margin-top:5px}
+.preset{border:1px solid var(--line);border-radius:6px;background:#fff;padding:5px 5px 4px;
+  display:flex;flex-direction:column;align-items:center;gap:4px;width:64px}
+.preset:hover{border-color:var(--soft)}
+.preset.on{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.preset .chip{width:100%;height:20px;border-radius:3px;display:flex;align-items:center;justify-content:center;gap:3px}
+.preset .chip i{display:block;width:12px;height:2px;border-radius:1px}
+.preset .chip i.a{width:7px;height:7px;border-radius:50%}
+.preset span{font-size:9.5px;letter-spacing:.4px;color:var(--soft)}
+.preset.on span{color:var(--ink);font-weight:700}
+
+.tweaks{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:11.5px;color:var(--soft)}
+.sw{display:flex;align-items:center;gap:5px;cursor:pointer;border:1px solid var(--line);
+  border-radius:6px;padding:3px 6px 3px 8px;background:#fff}
+.sw input[type=color]{width:22px;height:20px;padding:0;border:1px solid var(--line);border-radius:3px;background:none;cursor:pointer}
+.sw input[type=color]::-webkit-color-swatch-wrapper{padding:1px}
+.sw input[type=color]::-webkit-color-swatch{border:none;border-radius:2px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#fff}
+.seg button{border:none;background:none;padding:5px 8px;font-size:11px;color:var(--soft);border-left:1px solid var(--line)}
+.seg button:first-child{border-left:none}
+.seg button:hover{background:#f5f2ea;color:var(--ink)}
+.seg button.on{background:var(--ink);color:var(--paper)}
+.chk{display:flex;align-items:center;gap:5px;cursor:pointer}
+.darkwarn{display:none;margin:7px 0 0;font-size:11px;color:var(--warn);line-height:1.45}
+.darkwarn.show{display:block}
+
 .logorow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:5px}
 .logoprev{display:flex;align-items:center;justify-content:center;height:30px;min-width:74px;padding:0 9px;
   border:1px solid var(--line);border-radius:5px;background:var(--paper);flex:none}
@@ -114,9 +140,13 @@ input{font:inherit;color:inherit}
 .blank button{border:1px solid var(--ink);background:var(--ink);color:var(--paper);border-radius:6px;padding:7px 13px;font-size:12px;font-weight:700}
 .blank button.alt{background:transparent;color:var(--ink);font-weight:400}
 .blank button:hover{opacity:.85}
+/* The sheet's palette variables are re-set on #page itself by applyTheme(), so the
+   whole document re-colours without touching the app chrome around it. */
 #page{width:816px;height:1056px;padding:40px 48px;background:var(--paper);color:var(--body);overflow:hidden;
   box-shadow:0 14px 40px rgba(0,0,0,.45);
-  --fs:9.2px;--lh:12.5px;--secfs:8.6px;--secmt:8px;--legmt:14px;--c1:245px;--c2:137px;--c3:338px}
+  -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  --fs:9.2px;--lh:12.5px;--secfs:8.6px;--secmt:8px;--legmt:14px;--c1:245px;--c2:137px;--c3:338px;
+  --accent:#14140f;--keyline:1.5px}
 #page a{color:inherit;text-decoration:none}
 #page .head{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:9px}
 #page .name{font-size:31px;font-weight:700;letter-spacing:-.6px;line-height:1;color:var(--ink);white-space:nowrap}
@@ -124,7 +154,7 @@ input{font:inherit;color:inherit}
 #page .lockup{display:flex;flex-direction:column;align-items:flex-end;gap:7px}
 #page .lockup img{height:15px;width:auto;display:block}
 #page .role{font-size:10.5px;font-weight:700;letter-spacing:3.4px;text-transform:uppercase;color:var(--ink);white-space:nowrap}
-#page .keyline{height:1.5px;background:var(--ink)}
+#page .keyline{height:var(--keyline);background:var(--ink)}
 #page .contact{display:flex;justify-content:space-between;gap:16px;padding-top:6px;font-size:8.6px;letter-spacing:.3px;color:var(--soft);white-space:nowrap}
 #page table{width:100%;table-layout:fixed;border-collapse:collapse;text-align:left}
 #page td{padding:0 10px 0 0;vertical-align:top}
@@ -133,8 +163,9 @@ input{font:inherit;color:inherit}
 #page .credits{font-size:var(--fs);line-height:var(--lh);font-weight:400}
 #page .credits b{font-weight:700}
 #page .sline{display:flex;align-items:baseline;gap:7px;margin:var(--secmt) 0 2px}
-#page .slabel{font-size:var(--secfs);font-weight:700;letter-spacing:1.6px;color:var(--ink);white-space:nowrap}
+#page .slabel{font-size:var(--secfs);font-weight:700;letter-spacing:1.6px;color:var(--accent);white-space:nowrap}
 #page .srule{flex:1;height:1px;background:var(--rule)}
+#page.nodiv .srule{background:none}
 #page tr.over td{background:rgba(168,64,47,.12)}
 #page tr.wrap2 td{background:rgba(176,120,28,.10)}
 
@@ -209,6 +240,20 @@ input{font:inherit;color:inherit}
       </div>
       <input type="file" id="logofile" accept="image/*" hidden>
 
+      <div class="fld" style="margin-top:16px"><label>Design</label></div>
+      <div class="presets" id="presets"></div>
+      <div class="tweaks">
+        <label class="sw">Paper <input type="color" id="t-paper"></label>
+        <label class="sw">Text <input type="color" id="t-ink"></label>
+        <label class="sw">Accent <input type="color" id="t-accent"></label>
+        <span class="seg" id="t-keyline">
+          <button data-v="0.75">Hairline</button><button data-v="1.5">Rule</button><button data-v="3">Bold</button>
+        </span>
+        <label class="chk"><input type="checkbox" id="t-div"> Dividers</label>
+      </div>
+      <p class="darkwarn" id="t-darkwarn">Dark paper only reaches the page if you tick
+        <b>Background graphics</b> in the print dialog.</p>
+
       <div style="margin-top:14px">
         <div class="fld"><label>Contact line</label></div>
         <div id="ed-contact"></div>
@@ -271,6 +316,18 @@ const SEED = {
 };
 const BLANK_SECTIONS = ["FEATURE FILMS","TELEVISION","COMMERCIAL","MUSIC VIDEOS","DIGITAL MEDIA","SHORT FILMS"];
 
+/* Three colours and two structural switches per look. Everything else in the
+   palette is derived from paper and text, so any custom pair stays coherent. */
+const PRESETS = [
+  {id:"classic", name:"Classic", paper:"#faf9f5", ink:"#14140f", accent:"#14140f", keyline:1.5,  dividers:true},
+  {id:"slate",   name:"Slate",   paper:"#f4f6f7", ink:"#15181c", accent:"#35657f", keyline:1.5,  dividers:true},
+  {id:"warm",    name:"Warm",    paper:"#f8f2e8", ink:"#2a2018", accent:"#9b5a2b", keyline:3,    dividers:true},
+  {id:"noir",    name:"Noir",    paper:"#17181b", ink:"#eceae4", accent:"#c9a227", keyline:3,    dividers:true},
+  {id:"plain",   name:"Plain",   paper:"#ffffff", ink:"#101010", accent:"#101010", keyline:0.75, dividers:false}
+];
+const THEME0 = PRESETS[0];
+const HEX = /^#[0-9a-f]{6}$/i;
+
 /* ---------- constants ---------- */
 const PAGE_W=816, PAGE_H=1056, PAD_X=48, PAD_Y=40;
 const TOTAL = PAGE_W - PAD_X*2;      /* 720px of usable width  */
@@ -287,6 +344,25 @@ const clone = o => JSON.parse(JSON.stringify(o));
 const esc = t => String(t==null?"":t).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const dec = t => String(t==null?"":t).replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">")
                    .replace(/&quot;/g,'"').replace(/&#0?39;/g,"'").replace(/&nbsp;/g," ");
+/* ---------- colour ---------- */
+const hex2rgb = h => [1,3,5].map(i => parseInt(h.substr(i,2), 16));
+const rgb2hex = a => "#" + a.map(v =>
+  Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2,"0")).join("");
+const mix = (a, b, t) => { const A = hex2rgb(a), B = hex2rgb(b);
+  return rgb2hex(A.map((v,i) => v + (B[i] - v) * t)); };
+const luma = h => { const [r,g,b] = hex2rgb(h); return (0.2126*r + 0.7152*g + 0.0722*b) / 255; };
+
+/* The mix ratios reproduce the original ink ramp almost exactly, and hold up
+   just as well when the paper is darker than the text. */
+function palette(t){
+  return {paper:t.paper, ink:t.ink, accent:t.accent,
+    body:  mix(t.ink, t.paper, 0.11),
+    soft:  mix(t.ink, t.paper, 0.28),
+    faint: mix(t.ink, t.paper, 0.59),
+    rule:  mix(t.ink, t.paper, 0.80),
+    surround: mix(t.paper, t.ink, 0.78)};
+}
+
 function el(tag, attrs, kids){
   const n = document.createElement(tag);
   for (const k in (attrs||{})){
@@ -311,6 +387,14 @@ function normalize(d){
         ? {p:dec(r[0]), r:dec(r[1]), c:dec(r[2]), off:false, pin:false}
         : {p:dec(r.p), r:dec(r.r), c:dec(r.c), off:!!r.off, pin:!!r.pin})
     })),
+    theme: (t => ({
+      preset:   typeof t.preset === "string" ? t.preset : THEME0.id,
+      paper:    HEX.test(t.paper  || "") ? t.paper  : THEME0.paper,
+      ink:      HEX.test(t.ink    || "") ? t.ink    : THEME0.ink,
+      accent:   HEX.test(t.accent || "") ? t.accent : THEME0.accent,
+      keyline:  [0.75, 1.5, 3].indexOf(+t.keyline) < 0 ? THEME0.keyline : +t.keyline,
+      dividers: t.dividers === undefined ? THEME0.dividers : !!t.dividers
+    }))(d.theme || {}),
     opts: Object.assign({autoFit:true, autoCols:true, marks:false, density:1,
                          c1:34, c2:19, c3:47, target:8.6}, d.opts||{})
   };
@@ -473,6 +557,7 @@ function solve(){
    ========================================================= */
 function layout(){
   page.innerHTML = pageHTML();
+  applyTheme();                 /* before measuring — the keyline weight moves the text */
   const r = solve();
   const d = r.d, fits = r.fits, m = lastM, h = sheetH();
   showSize(m.fs);
@@ -889,6 +974,68 @@ function extractCV(text){
   try { return JSON.parse(lit); } catch(e){ return Function("return (" + lit + ")")(); }
 }
 
+/* =========================================================
+   DESIGN
+   ========================================================= */
+function applyTheme(){
+  const p = palette(S.theme);
+  page.style.setProperty("--paper",  p.paper);
+  page.style.setProperty("--ink",    p.ink);
+  page.style.setProperty("--body",   p.body);
+  page.style.setProperty("--soft",   p.soft);
+  page.style.setProperty("--faint",  p.faint);
+  page.style.setProperty("--rule",   p.rule);
+  page.style.setProperty("--accent", S.theme.accent);
+  page.style.setProperty("--keyline", S.theme.keyline + "px");
+  page.classList.toggle("nodiv", !S.theme.dividers);
+  $("#pvhost").style.background = p.surround;
+  /* printing a dark sheet needs background graphics on, which is off by default */
+  $("#t-darkwarn").classList.toggle("show", luma(S.theme.paper) < 0.55);
+}
+
+/* A preset only sets values — nothing is locked, so any swatch can be changed after. */
+function matchPreset(){
+  const t = S.theme;
+  const hit = PRESETS.find(p => p.paper === t.paper && p.ink === t.ink && p.accent === t.accent &&
+    p.keyline === t.keyline && p.dividers === t.dividers);
+  return hit ? hit.id : "custom";
+}
+function renderDesign(){
+  S.theme.preset = matchPreset();
+  const host = $("#presets"); host.innerHTML = "";
+  PRESETS.forEach(p => {
+    const b = el("button", {class:"preset" + (S.theme.preset === p.id ? " on" : ""),
+      title:p.name, onclick:() => {
+        Object.assign(S.theme, {paper:p.paper, ink:p.ink, accent:p.accent,
+                                keyline:p.keyline, dividers:p.dividers});
+        renderDesign(); layout();
+      }});
+    const chip = el("div", {class:"chip"});
+    chip.style.background = p.paper;
+    chip.style.border = "1px solid " + mix(p.ink, p.paper, 0.78);
+    const bar = el("i"); bar.style.background = p.ink;
+    const dot = el("i", {class:"a"}); dot.style.background = p.accent;
+    chip.append(bar, dot);
+    b.append(chip, el("span", {}, [p.name]));
+    host.append(b);
+  });
+  $("#t-paper").value = S.theme.paper;
+  $("#t-ink").value = S.theme.ink;
+  $("#t-accent").value = S.theme.accent;
+  $("#t-div").checked = S.theme.dividers;
+  $("#t-keyline").querySelectorAll("button").forEach(b =>
+    b.classList.toggle("on", +b.dataset.v === S.theme.keyline));
+}
+
+[["#t-paper","paper"], ["#t-ink","ink"], ["#t-accent","accent"]].forEach(([sel, key]) => {
+  $(sel).addEventListener("input", e => { S.theme[key] = e.target.value; renderDesign(); layout(); });
+});
+$("#t-keyline").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  S.theme.keyline = +b.dataset.v; renderDesign(); layout();
+});
+$("#t-div").onchange = e => { S.theme.dividers = e.target.checked; renderDesign(); layout(); };
+
 /* ---------- logo ---------- */
 const LOGO_MAX = 512 * 1024;   /* keeps the saved state inside the localStorage quota */
 
@@ -966,6 +1113,7 @@ function buildExport(){
   const secmt = parseFloat(page.style.getPropertyValue("--secmt"));
   const legmt = parseFloat(page.style.getPropertyValue("--legmt"));
   const c = lastCols || manualCols();
+  const P = palette(S.theme);
   const pct = v => (v / TOTAL * 100).toFixed(3) + "%";
   const data = {
     name:S.name, company:S.company, role:S.role,
@@ -973,6 +1121,7 @@ function buildExport(){
     sections:S.sections.map(s => ({name:s.name,
       credits:s.credits.filter(x => !x.off).map(x => ({p:x.p, r:x.r, c:x.c}))}))
         .filter(s => s.credits.length),
+    theme:S.theme,      /* so re-importing brings the look back, not just the words */
     opts:{autoFit:S.opts.autoFit, autoCols:S.opts.autoCols, target:S.opts.target}
   };
   return [
@@ -981,9 +1130,11 @@ function buildExport(){
 '<meta charset="utf-8">',
 '<title>' + esc(S.name.replace(/\b(\w)(\w*)/g, (m,a,b) => a + b.toLowerCase())) + ' — ' + esc(S.role) + ' CV</title>',
 '<style>',
-'  :root{--paper:#faf9f5;--ink-strong:#14140f;--ink-body:#2e2d29;--ink-soft:#54524b;--ink-faint:#9b998f;--rule:#cbc9c1}',
+'  :root{--paper:' + P.paper + ';--ink-strong:' + P.ink + ';--ink-body:' + P.body +
+  ';--ink-soft:' + P.soft + ';--ink-faint:' + P.faint + ';--rule:' + P.rule +
+  ';--accent:' + P.accent + '}',
 '  *{box-sizing:border-box}',
-'  body{margin:0;background:#46443e;font-family:\'Helvetica Neue\',Helvetica,Arial,sans-serif;',
+'  body{margin:0;background:' + P.surround + ';font-family:\'Helvetica Neue\',Helvetica,Arial,sans-serif;',
 '    -webkit-print-color-adjust:exact;print-color-adjust:exact}',
 '  #page{width:816px;height:1056px;margin:40px auto;padding:40px 48px;background:var(--paper);',
 '    color:var(--ink-body);overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.45)}',
@@ -994,7 +1145,7 @@ function buildExport(){
 '  .lockup{display:flex;flex-direction:column;align-items:flex-end;gap:7px}',
 '  .lockup img{height:15px;width:auto;display:block}',
 '  .role{font-size:10.5px;font-weight:700;letter-spacing:3.4px;text-transform:uppercase;color:var(--ink-strong);white-space:nowrap}',
-'  .keyline{height:1.5px;background:var(--ink-strong)}',
+'  .keyline{height:' + S.theme.keyline + 'px;background:var(--ink-strong)}',
 '  .contact{display:flex;justify-content:space-between;gap:16px;padding-top:6px;font-size:8.6px;',
 '    letter-spacing:.3px;color:var(--ink-soft);white-space:nowrap}',
 '  table{width:100%;table-layout:fixed;border-collapse:collapse;text-align:left}',
@@ -1004,8 +1155,8 @@ function buildExport(){
 '  .credits{font-size:' + fs.toFixed(2) + 'px;line-height:' + lh.toFixed(2) + 'px;font-weight:400}',
 '  .credits b{font-weight:700}',
 '  .sec{display:flex;align-items:baseline;gap:7px;margin:' + secmt.toFixed(1) + 'px 0 2px}',
-'  .sec-label{font-size:' + secfs.toFixed(2) + 'px;font-weight:700;letter-spacing:1.6px;color:var(--ink-strong);white-space:nowrap}',
-'  .sec-rule{flex:1;height:1px;background:var(--rule)}',
+'  .sec-label{font-size:' + secfs.toFixed(2) + 'px;font-weight:700;letter-spacing:1.6px;color:var(--accent);white-space:nowrap}',
+'  .sec-rule{flex:1;height:1px;background:' + (S.theme.dividers ? 'var(--rule)' : 'none') + '}',
 '  @page{size:8.5in 11in;margin:0}',
 '  @media print{body{background:none}#page{margin:0;box-shadow:none}}',
 '</style>',
@@ -1107,6 +1258,7 @@ function syncOpts(){
   $("#o-marks").checked = S.opts.marks;
   $("#f-name").value = S.name; $("#f-company").value = S.company; $("#f-role").value = S.role;
   renderLogo();
+  renderDesign();
 }
 $("#o-fit").onchange   = e => { S.opts.autoFit  = e.target.checked; layout(); };
 $("#o-cols").onchange  = e => { S.opts.autoCols = e.target.checked; layout(); };
