@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CV Updater</title>
+<style>
+:root{
+  --paper:#faf9f5; --ink:#14140f; --body:#2e2d29; --soft:#54524b; --faint:#9b998f;
+  --rule:#cbc9c1; --bg:#e7e3d9; --panel:#fffefb; --line:#d8d4c9;
+  --ok:#3f7d4e; --warn:#b0781c; --bad:#a8402f;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--body);
+  font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:13px}
+button{font:inherit;cursor:pointer}
+input{font:inherit;color:inherit}
+
+/* ---------- chrome ---------- */
+.topbar{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--ink);color:var(--paper);position:sticky;top:0;z-index:20}
+.topbar h1{font-size:13px;font-weight:700;letter-spacing:2.2px;margin:0;text-transform:uppercase}
+.topbar .sub{font-size:11px;color:#a5a299;letter-spacing:.4px;margin-right:auto}
+.btn{background:transparent;color:var(--paper);border:1px solid #56534b;border-radius:6px;padding:6px 11px;font-size:12px;letter-spacing:.3px;white-space:nowrap}
+.btn:hover{background:#2e2d29;border-color:#7d7a70}
+.btn.primary{background:var(--paper);color:var(--ink);border-color:var(--paper);font-weight:700}
+.btn.primary:hover{background:#fff}
+
+.app{display:grid;grid-template-columns:minmax(420px,1fr) minmax(560px,1.15fr);gap:14px;padding:14px;align-items:start}
+@media (max-width:1080px){.app{grid-template-columns:1fr}}
+
+.pane{background:var(--panel);border:1px solid var(--line);border-radius:10px;min-width:0}
+.pane>h2{margin:0;padding:11px 14px;font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--soft);border-bottom:1px solid var(--line)}
+.pad{padding:12px 14px}
+.editor{max-height:calc(100vh - 92px);overflow:auto}
+.right{position:sticky;top:70px;display:flex;flex-direction:column;gap:14px}
+
+/* ---------- editor ---------- */
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.fld{display:flex;flex-direction:column;gap:4px;min-width:0}
+.fld>label{font-size:9px;letter-spacing:1.3px;text-transform:uppercase;color:var(--faint);font-weight:700}
+.in{width:100%;border:1px solid var(--line);border-radius:5px;padding:6px 7px;background:#fff;font-size:12.5px}
+.in:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 2px rgba(20,20,15,.08)}
+
+.crow,.ctrow{display:flex;align-items:center;gap:5px;padding:3px 0;border-radius:5px}
+.crow{border-bottom:1px solid #f0ede5}
+.crow.flag{background:#fdf6e4;box-shadow:inset 3px 0 0 var(--warn)}
+.crow.off .in{opacity:.4;text-decoration:line-through}
+.crow.pin{box-shadow:inset 3px 0 0 var(--ok)}
+.crow.drop-before{box-shadow:inset 0 3px 0 var(--ink)}
+.crow.drop-after{box-shadow:inset 0 -3px 0 var(--ink)}
+.crow .in,.ctrow .in{min-width:0}
+.crow .grip{cursor:grab;color:var(--faint);padding:0 2px;user-select:none;font-size:12px;flex:none}
+.crow .in.p{flex:3.2 1 0;font-weight:700}
+.crow .in.r{flex:1.8 1 0}
+.crow .in.c{flex:4 1 0}
+.ctrow .in.t{flex:2 1 0}
+.ctrow .in.l{flex:2.4 1 0}
+.ico{border:1px solid transparent;background:transparent;border-radius:5px;padding:2px 4px;font-size:12px;line-height:1;color:var(--faint);width:22px;flex:none;text-align:center}
+.ico:hover{background:#f0ede5;color:var(--ink)}
+.ico.on{color:var(--ink)}
+.ico.del:hover{background:#fbe9e6;color:var(--bad)}
+
+.sec{border:1px solid var(--line);border-radius:8px;margin-bottom:10px;overflow:hidden}
+.sec>header{display:flex;align-items:center;gap:6px;background:#f5f2ea;padding:6px 8px;border-bottom:1px solid var(--line)}
+.sec>header .in{min-width:0;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;font-size:11px;background:transparent;border-color:transparent}
+.sec>header .in:focus{background:#fff;border-color:var(--ink)}
+.sec .count{font-size:10px;color:var(--faint);white-space:nowrap;padding:0 4px}
+.sec .body{padding:4px 8px 8px}
+.addrow{margin-top:6px;background:#fff;border:1px dashed var(--line);border-radius:5px;padding:5px 9px;font-size:11.5px;color:var(--soft);width:100%;text-align:left}
+.addrow:hover{border-color:var(--ink);color:var(--ink)}
+
+/* ---------- preview ---------- */
+.pvbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:9px 14px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--soft)}
+.pvbar label{display:flex;align-items:center;gap:5px;cursor:pointer}
+.pvbar .spacer{margin-left:auto}
+.pvbar code{font-size:11px;color:var(--ink);background:#f2efe7;padding:2px 5px;border-radius:4px}
+/* #pagewrap is taken out of flow so the 816px sheet never widens the app layout */
+#pvhost{position:relative;overflow:hidden;background:#46443e;border-radius:0 0 9px 9px}
+#pagewrap{position:absolute;top:0;left:0;transform-origin:top left}
+#page{width:816px;height:1056px;padding:40px 48px;background:var(--paper);color:var(--body);overflow:hidden;
+  box-shadow:0 14px 40px rgba(0,0,0,.45);
+  --fs:9.2px;--lh:12.5px;--secfs:8.6px;--secmt:8px;--legmt:14px;--c1:245px;--c2:137px;--c3:338px}
+#page a{color:inherit;text-decoration:none}
+#page .head{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:9px}
+#page .name{font-size:31px;font-weight:700;letter-spacing:-.6px;line-height:1;color:var(--ink);white-space:nowrap}
+#page .company{font-size:8.4px;font-weight:700;letter-spacing:2.6px;color:var(--soft);margin-top:5px;white-space:nowrap}
+#page .lockup{display:flex;flex-direction:column;align-items:flex-end;gap:7px}
+#page .lockup img{height:15px;width:auto;display:block}
+#page .role{font-size:10.5px;font-weight:700;letter-spacing:3.4px;text-transform:uppercase;color:var(--ink);white-space:nowrap}
+#page .keyline{height:1.5px;background:var(--ink)}
+#page .contact{display:flex;justify-content:space-between;gap:16px;padding-top:6px;font-size:8.6px;letter-spacing:.3px;color:var(--soft);white-space:nowrap}
+#page table{width:100%;table-layout:fixed;border-collapse:collapse;text-align:left}
+#page td{padding:0 10px 0 0;vertical-align:top}
+#page td:last-child{padding-right:0}
+#page .legend{margin-top:var(--legmt);font-size:7.2px;letter-spacing:1.4px;color:var(--faint)}
+#page .credits{font-size:var(--fs);line-height:var(--lh);font-weight:400}
+#page .credits b{font-weight:700}
+#page .sline{display:flex;align-items:baseline;gap:7px;margin:var(--secmt) 0 2px}
+#page .slabel{font-size:var(--secfs);font-weight:700;letter-spacing:1.6px;color:var(--ink);white-space:nowrap}
+#page .srule{flex:1;height:1px;background:var(--rule)}
+#page tr.over td{background:rgba(168,64,47,.12)}
+#page tr.wrap2 td{background:rgba(176,120,28,.10)}
+
+/* ---------- advisor ---------- */
+.grade{display:flex;align-items:center;gap:11px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.badge{font-size:10px;font-weight:700;letter-spacing:1.6px;padding:5px 9px;border-radius:5px;color:#fff;white-space:nowrap}
+.badge.ok{background:var(--ok)} .badge.warn{background:var(--warn)} .badge.bad{background:var(--bad)}
+.grade .txt{font-size:12px;line-height:1.45}
+.grade .txt b{color:var(--ink)}
+.bars{display:flex;gap:14px;padding:8px 14px;border-bottom:1px solid var(--line);font-size:11px;color:var(--soft);flex-wrap:wrap}
+.bars b{color:var(--ink);font-size:12px}
+.advice{margin:0;padding:10px 14px;list-style:none;display:flex;flex-direction:column;gap:8px;max-height:300px;overflow:auto}
+.advice li{display:flex;gap:9px;align-items:flex-start;font-size:12px;line-height:1.45}
+.advice .dot{width:6px;height:6px;border-radius:50%;margin-top:5px;flex:none;background:var(--faint)}
+.advice li.w .dot{background:var(--warn)} .advice li.b .dot{background:var(--bad)} .advice li.g .dot{background:var(--ok)}
+.cands{border-top:1px solid var(--line);padding:10px 14px}
+.cands h3{margin:0 0 7px;font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--faint)}
+.cand{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f2efe7;font-size:12px}
+.cand:last-child{border-bottom:none}
+.cand .why{color:var(--soft);font-size:11px}
+.cand .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cand button{border:1px solid var(--line);background:#fff;border-radius:5px;padding:3px 8px;font-size:11px;white-space:nowrap}
+.cand button:hover{border-color:var(--ink)}
+.hint{padding:0 14px 12px;font-size:11px;color:var(--faint);line-height:1.5}
+
+@page{size:8.5in 11in;margin:0}
+@media print{
+  body{background:#fff}
+  .topbar,.editor,.pvbar,.advisor,.hint,.pane>h2{display:none!important}
+  .app{display:block;padding:0;gap:0}
+  .right{position:static;gap:0}
+  .pane{border:none;border-radius:0;background:none}
+  #pvhost{padding:0;background:none;border-radius:0;display:block;height:auto!important;overflow:visible;position:static}
+  #pagewrap{position:static!important;transform:none!important}
+  #page{box-shadow:none;margin:0}
+  #page tr.over td,#page tr.wrap2 td{background:none!important}   /* never print the review marks */
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>CV Updater</h1>
+  <span class="sub" id="subtitle"></span>
+  <button class="btn" id="b-import">Import HTML…</button>
+  <button class="btn" id="b-reset">Reset</button>
+  <button class="btn" id="b-export">Export HTML</button>
+  <button class="btn primary" id="b-print">Print / PDF</button>
+  <input type="file" id="file" accept=".html,.htm,.json" hidden>
+</div>
+
+<div class="app">
+  <section class="pane editor">
+    <h2>Content</h2>
+    <div class="pad">
+      <div class="grid3">
+        <div class="fld"><label>Name</label><input class="in" id="f-name"></div>
+        <div class="fld"><label>Company</label><input class="in" id="f-company"></div>
+        <div class="fld"><label>Role</label><input class="in" id="f-role"></div>
+      </div>
+      <div style="margin-top:14px">
+        <div class="fld"><label>Contact line</label></div>
+        <div id="ed-contact"></div>
+        <button class="addrow" id="add-contact">+ Add contact item</button>
+      </div>
+      <div style="margin-top:16px">
+        <div class="fld"><label>Sections &amp; credits</label></div>
+        <div id="ed-sections" style="margin-top:6px"></div>
+        <button class="addrow" id="add-section">+ Add section</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="right">
+    <div class="pane advisor">
+      <h2>Fit &amp; readability</h2>
+      <div class="grade"><div class="badge" id="a-badge">—</div><div class="txt" id="a-summary"></div></div>
+      <div class="bars" id="a-bars"></div>
+      <ul class="advice" id="a-list"></ul>
+      <div class="cands" id="a-cands"></div>
+    </div>
+
+    <div class="pane">
+      <h2>One-page preview</h2>
+      <div class="pvbar">
+        <label><input type="checkbox" id="o-fit" checked> Auto-fit to one page</label>
+        <label><input type="checkbox" id="o-cols" checked> Auto columns</label>
+        <label><input type="checkbox" id="o-marks"> Mark problem rows</label>
+        <span class="spacer"></span>
+        <span>text <code id="o-fs">9.2px</code></span>
+        <span>cols <code id="o-cw">—</code></span>
+      </div>
+      <div id="pvhost"><div id="pagewrap"><div id="page"></div></div></div>
+    </div>
+    <div class="hint">Auto-fit only shrinks the credit text, never the header. Column widths are chosen to minimise
+      wrapped lines. Nothing is deleted automatically — the eye icon hides a credit so you can test a shorter list,
+      the pin icon protects it from trim suggestions.</div>
+  </section>
+</div>
+
+<script>
+"use strict";
+const LOGO = "__LOGO_URI__";
+const SEED = __SEED_JSON__;
+
+/* ---------- constants ---------- */
+const PAGE_W=816, PAGE_H=1056, PAD_X=48, PAD_Y=40;
+const TOTAL = PAGE_W - PAD_X*2;      /* 720px of usable width  */
+const AVAIL = PAGE_H - PAD_Y*2;      /* 976px of usable height */
+const BASE  = {fs:9.2, lh:12.5, secfs:8.6, secmt:8, legmt:14};
+const GUT   = 10;                    /* column gutter, px */
+const KEY   = "cv-updater.v1";
+const JUNIOR = /\b(boom|utility|playback|a2|a\.?2|assistant|add\.?|additional|second|2nd|swing|trainee|intern|pa)\b/i;
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const clone = o => JSON.parse(JSON.stringify(o));
+const esc = t => String(t==null?"":t).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const dec = t => String(t==null?"":t).replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">")
+                   .replace(/&quot;/g,'"').replace(/&#0?39;/g,"'").replace(/&nbsp;/g," ");
+function el(tag, attrs, kids){
+  const n = document.createElement(tag);
+  for (const k in (attrs||{})){
+    if (k === "class") n.className = attrs[k];
+    else if (k.slice(0,2) === "on") n.addEventListener(k.slice(2), attrs[k]);
+    else if (attrs[k] !== false && attrs[k] != null) n.setAttribute(k, attrs[k]);
+  }
+  for (const c of (kids||[])) n.append(c);
+  return n;
+}
+
+/* ---------- state ---------- */
+function normalize(d){
+  const out = {
+    name: dec(d.name||""), company: dec(d.company||""), role: dec(d.role||""),
+    contact: (d.contact||[]).map(c => typeof c === "string"
+      ? {text:dec(c), link:""} : {text:dec(c.text||""), link:c.link||""}),
+    sections: (d.sections||[]).map(s => ({
+      name: dec(s.name||""),
+      credits: (s.credits||[]).map(r => Array.isArray(r)
+        ? {p:dec(r[0]), r:dec(r[1]), c:dec(r[2]), off:false, pin:false}
+        : {p:dec(r.p), r:dec(r.r), c:dec(r.c), off:!!r.off, pin:!!r.pin})
+    })),
+    opts: Object.assign({autoFit:true, autoCols:true, marks:false, density:1,
+                         c1:34, c2:19, c3:47, target:8.6}, d.opts||{})
+  };
+  return out;
+}
+let S = normalize(SEED);
+try { const raw = localStorage.getItem(KEY); if (raw) S = normalize(JSON.parse(raw)); } catch(e){}
+let saveT = 0;
+function save(){ clearTimeout(saveT); saveT = setTimeout(() => {
+  try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }, 250); }
+
+const visible = () => S.sections.flatMap(s => s.credits.filter(c => !c.off));
+const totalCredits = () => S.sections.reduce((a,s) => a + s.credits.length, 0);
+
+/* =========================================================
+   PAGE RENDERING
+   ========================================================= */
+const page = $("#page");
+
+function pageHTML(){
+  const contact = S.contact.map(c =>
+    "<div>" + (c.link ? '<a href="'+esc(c.link)+'">'+esc(c.text)+"</a>" : esc(c.text)) + "</div>").join("");
+  const cols = '<colgroup><col style="width:var(--c1)"><col style="width:var(--c2)"><col style="width:var(--c3)"></colgroup>';
+  const secs = S.sections.map((s, si) => {
+    const rows = s.credits.map((c, ci) => c.off ? "" :
+      '<tr data-k="'+si+":"+ci+'"><td><b>'+esc(c.p)+"</b></td><td>"+esc(c.r)+"</td><td>"+esc(c.c)+"</td></tr>").join("");
+    if (!rows) return "";
+    return '<div class="sline"><div class="slabel">'+esc(s.name)+'</div><div class="srule"></div></div>' +
+           '<table class="credits">'+cols+"<tbody>"+rows+"</tbody></table>";
+  }).join("");
+  return '<div id="sheet">' +
+    '<div class="head"><div><div class="name">'+esc(S.name)+'</div>' +
+    '<div class="company">'+esc(S.company)+"</div></div>" +
+    '<div class="lockup">'+(LOGO?'<img src="'+LOGO+'" alt="">':"")+
+    '<div class="role">'+esc(S.role)+"</div></div></div>" +
+    '<div class="keyline"></div><div class="contact">'+contact+"</div>" +
+    '<table class="legend">'+cols+"<tbody><tr><td>PROJECT</td><td>POSITION</td>" +
+    "<td>PRODUCTION CO. / PRODUCER / DIRECTOR</td></tr></tbody></table>" + secs + "</div>";
+}
+
+/* ---------- text measurement (canvas, for column sizing) ---------- */
+const mctx = document.createElement("canvas").getContext("2d");
+const FONT = (w, fs) => w + " " + fs + "px 'Helvetica Neue', Helvetica, Arial, sans-serif";
+
+function computeCols(fs){
+  const rows = visible();
+  if (!rows.length) return {c1:TOTAL*.34, c2:TOTAL*.19, c3:TOTAL*.47, lines:0};
+  mctx.font = FONT(700, fs); const w1 = rows.map(r => mctx.measureText(r.p).width);
+  mctx.font = FONT(400, fs);
+  const w2 = rows.map(r => mctx.measureText(r.r).width);
+  const w3 = rows.map(r => mctx.measureText(r.c).width);
+  mctx.font = FONT(700, 7.2);
+  const legend = Math.max(mctx.measureText("PROJECT").width, 40);
+
+  const c2 = Math.min(Math.max(Math.max.apply(null, w2), 46) + GUT, TOTAL * 0.24);
+  const R  = TOTAL - c2;
+  let best = null;
+  for (let c1 = Math.round(R*0.28); c1 <= Math.round(R*0.72); c1 += 2){
+    const a1 = c1 - GUT, a3 = R - c1;
+    if (a1 < legend + 20 || a3 < 90) continue;
+    let lines = 0;
+    for (let i = 0; i < rows.length; i++){
+      lines += Math.max(Math.ceil(w1[i]/a1) || 1, Math.ceil(w3[i]/a3) || 1);
+    }
+    /* tie-break: leave comparable breathing room on both text columns */
+    const bal = Math.abs(Math.max.apply(null,w1)/a1 - Math.max.apply(null,w3)/a3);
+    if (!best || lines < best.lines || (lines === best.lines && bal < best.bal))
+      best = {c1:c1, lines:lines, bal:bal};
+  }
+  if (!best) return {c1:R*0.42, c2:c2, c3:R*0.58, lines:rows.length};
+  return {c1:best.c1, c2:c2, c3:R - best.c1, lines:best.lines};
+}
+
+/* ---------- density ---------- */
+let lastCols = null, lastM = {fs:BASE.fs, lh:BASE.lh};
+function applyDensity(d){
+  const fs = BASE.fs * d;
+  const lh = Math.max(fs * 1.18, BASE.lh * d);
+  page.style.setProperty("--fs", fs.toFixed(2)+"px");
+  page.style.setProperty("--lh", lh.toFixed(2)+"px");
+  page.style.setProperty("--secfs", Math.min(BASE.secfs, Math.max(7, BASE.secfs*(0.55+0.45*d))).toFixed(2)+"px");
+  page.style.setProperty("--secmt", Math.max(3, BASE.secmt*d).toFixed(1)+"px");
+  page.style.setProperty("--legmt", Math.max(6, BASE.legmt*d).toFixed(1)+"px");
+  lastM = {fs:fs, lh:lh, d:d};
+  return lastM;
+}
+function applyCols(c){
+  lastCols = c;
+  page.style.setProperty("--c1", c.c1.toFixed(1)+"px");
+  page.style.setProperty("--c2", c.c2.toFixed(1)+"px");
+  page.style.setProperty("--c3", c.c3.toFixed(1)+"px");
+}
+function manualCols(){
+  return {c1:TOTAL*S.opts.c1/100, c2:TOTAL*S.opts.c2/100, c3:TOTAL*S.opts.c3/100};
+}
+const sheetH = () => document.getElementById("sheet").scrollHeight;
+
+/* Largest density (capped at the design size) that fits, for a fixed column set.
+   Columns are held still so the search stays monotonic. Returns null if nothing fits. */
+function fitFixed(cols){
+  applyCols(cols);
+  let lo = 0.55, hi = 1.0;
+  applyDensity(hi); if (sheetH() <= AVAIL + 0.5) return hi;
+  applyDensity(lo); if (sheetH() >  AVAIL + 0.5) return null;
+  for (let i = 0; i < 20; i++){
+    const mid = (lo + hi) / 2;
+    applyDensity(mid);
+    if (sheetH() <= AVAIL + 0.5) lo = mid; else hi = mid;
+  }
+  applyDensity(lo);
+  return lo;
+}
+
+/* Pick column widths and text size together, and leave them applied.
+   Pass 1 sizes the columns for the design text size; if that has to shrink,
+   pass 2 re-sizes them for the smaller text and keeps whichever wins. */
+function solve(){
+  const rank = d => (d == null ? -1 : d);
+  if (!S.opts.autoCols){
+    const c = manualCols();
+    if (!S.opts.autoFit){ applyCols(c); applyDensity(S.opts.density);
+      return {d:S.opts.density, fits:sheetH() <= AVAIL + 0.5}; }
+    const d = fitFixed(c);
+    if (d == null) applyDensity(0.55);
+    return {d:(d == null ? 0.55 : d), fits:d != null};
+  }
+  const cA = computeCols(BASE.fs);
+  if (!S.opts.autoFit){ applyCols(cA); applyDensity(S.opts.density);
+    return {d:S.opts.density, fits:sheetH() <= AVAIL + 0.5}; }
+  const dA = fitFixed(cA);
+  if (dA === 1) return {d:1, fits:true};
+  const cB = computeCols(BASE.fs * (dA == null ? 0.55 : dA));
+  const dB = fitFixed(cB);
+  const best = rank(dB) > rank(dA) ? {c:cB, d:dB} : {c:cA, d:dA};
+  applyCols(best.c);
+  applyDensity(best.d == null ? 0.55 : best.d);
+  return {d:(best.d == null ? 0.55 : best.d), fits:best.d != null};
+}
+
+/* =========================================================
+   LAYOUT + ADVICE
+   ========================================================= */
+function layout(){
+  page.innerHTML = pageHTML();
+  const r = solve();
+  const d = r.d, fits = r.fits, m = lastM, h = sheetH();
+  $("#o-fs").textContent = m.fs.toFixed(1) + "px";
+  $("#o-cw").textContent = lastCols
+    ? [lastCols.c1, lastCols.c2, lastCols.c3].map(v => Math.round(v/TOTAL*100)+"%").join(" / ") : "—";
+
+  /* how many rows wrap onto a second line */
+  const wrapped = [];
+  page.querySelectorAll("tr[data-k]").forEach(tr => {
+    const lines = Math.round(tr.offsetHeight / m.lh);
+    if (lines > 1){
+      wrapped.push({k:tr.dataset.k, extra:lines-1});
+      if (S.opts.marks) tr.classList.add("wrap2");
+    }
+  });
+  if (S.opts.marks && !fits){
+    /* mark the rows that fall below the page edge */
+    const top = document.getElementById("sheet").getBoundingClientRect().top;
+    page.querySelectorAll("tr[data-k]").forEach(tr => {
+      if (tr.getBoundingClientRect().bottom - top > AVAIL) tr.classList.add("over");
+    });
+  }
+  advise({d:d, fs:m.fs, lh:m.lh, h:h, fits:fits, wrapped:wrapped});
+  scalePreview();
+  save();
+}
+
+/* Rows that must go to reach a target text size (columns held still). */
+function rowsToCut(targetFs, d0){
+  const m = applyDensity(targetFs / BASE.fs);
+  const over = sheetH() - AVAIL;
+  const out = {n: over > 0 ? Math.ceil(over / m.lh) : 0,
+               spare: over < 0 ? Math.floor(-over / m.lh) : 0};
+  applyDensity(d0);
+  return out;
+}
+
+function grade(fs, fits){
+  if (!fits)      return {cls:"bad",  label:"OVERLOADED"};
+  if (fs >= 9.15) return {cls:"ok",   label:"COMFORTABLE"};
+  if (fs >= 8.50) return {cls:"ok",   label:"GOOD"};
+  if (fs >= 7.90) return {cls:"warn", label:"TIGHT"};
+  if (fs >= 7.30) return {cls:"warn", label:"CRAMPED"};
+  return {cls:"bad", label:"TOO SMALL"};
+}
+
+function advise(st){
+  const vis = visible().length, all = totalCredits();
+  const g = grade(st.fs, st.fits);
+  $("#a-badge").className = "badge " + g.cls;
+  $("#a-badge").textContent = g.label;
+
+  /* what would it take to reach a comfortable size? */
+  const need = rowsToCut(S.opts.target, st.d);
+  const needComfort = rowsToCut(BASE.fs, st.d);
+
+  let summary;
+  if (!st.fits){
+    summary = "<b>Does not fit on one page</b> even at the smallest usable size. Cut roughly <b>" +
+      Math.max(1, need.n) + " credits</b> — or split this into a second page.";
+  } else if (st.fs >= 9.15){
+    summary = "Fits on one page at the <b>full design size</b>" +
+      (needComfort.spare > 0 ? ", with room for about <b>" + needComfort.spare + " more credit" +
+        (needComfort.spare === 1 ? "" : "s") + "</b>." : ".");
+  } else {
+    summary = "Fits on one page, but the credit text is squeezed to <b>" + st.fs.toFixed(1) +
+      "px</b> (design size 9.2px). Removing <b>" + need.n + " credit" + (need.n===1?"":"s") +
+      "</b> would bring it back to a comfortable " + S.opts.target + "px.";
+  }
+  $("#a-summary").innerHTML = summary;
+
+  const fillPct = Math.round(st.h / AVAIL * 100);
+  $("#a-bars").innerHTML =
+    "<span>credits <b>"+vis+"</b>"+(all!==vis?" of "+all:"")+"</span>" +
+    "<span>sections <b>"+S.sections.filter(s=>s.credits.some(c=>!c.off)).length+"</b></span>" +
+    "<span>page fill <b>"+fillPct+"%</b></span>" +
+    "<span>text size <b>"+st.fs.toFixed(1)+"px</b></span>" +
+    "<span>wrapped lines <b>"+st.wrapped.reduce((a,w)=>a+w.extra,0)+"</b></span>";
+
+  /* ---- advice list ---- */
+  const tips = [];
+  if (vis > 60)
+    tips.push(["b","<b>The list is too long for one page.</b> "+vis+" credits is well past what a single sheet reads " +
+      "comfortably — around 40–50 is the practical ceiling. Keep the strongest work here and move the rest to a full " +
+      "credit list on your site or IMDb."]);
+  else if (vis > 48)
+    tips.push(["w","At "+vis+" credits the sheet is dense. Most readers scan the top three or four lines of each " +
+      "section, so anything below that is doing very little work."]);
+  else if (vis >= 30)
+    tips.push(["g",vis+" credits is a healthy one-page length."]);
+  else if (vis > 0 && vis < 30 && st.fs >= 9.15 && needComfort.spare >= 3)
+    tips.push(["g","There is space left — you could add about "+needComfort.spare+" more credits before it tightens."]);
+
+  if (st.wrapped.length){
+    const extra = st.wrapped.reduce((a,w) => a + w.extra, 0);
+    tips.push(["w", st.wrapped.length + " credit" + (st.wrapped.length===1 ? " wraps" : "s wrap") +
+      " onto a second line, costing " + extra + " line" + (extra===1?"":"s") + " of space. Shortening " +
+      (st.wrapped.length===1 ? "that entry" : "those entries") +
+      " (drop a producer name, or shorten the title) is the cheapest way to buy room."]);
+  }
+
+  S.sections.forEach(s => {
+    const n = s.credits.filter(c => !c.off).length;
+    if (n > 14) tips.push(["w","<b>"+esc(s.name)+"</b> has "+n+" credits — the longest section on the page. " +
+      "Cutting it to 10–12 of the most recognisable names would improve the whole sheet's readability."]);
+  });
+
+  /* repeated production companies */
+  const firms = {};
+  S.sections.forEach(s => s.credits.forEach(c => {
+    if (c.off) return;
+    const raw = (c.c.split("/")[0] || "").trim(), f = raw.toLowerCase();
+    if (f.length > 2) firms[f] = firms[f] ? {n:firms[f].n+1, raw:firms[f].raw} : {n:1, raw:raw};
+  }));
+  const rep = Object.keys(firms).filter(f => firms[f].n >= 3).sort((a,b) => firms[b].n - firms[a].n);
+  if (rep.length) tips.push(["w","Repeated clients: " +
+    rep.slice(0,3).map(f => esc(firms[f].raw) + " ×" + firms[f].n).join(", ") +
+    ". One or two entries per client carries the same signal as four."]);
+
+  const jr = [];
+  S.sections.forEach(s => s.credits.forEach(c => { if (!c.off && !c.pin && JUNIOR.test(c.r)) jr.push(c); }));
+  if (jr.length >= 3 && /mixer/i.test(S.role))
+    tips.push(["w",jr.length+" credits list a non-mixer position ("+
+      Array.from(new Set(jr.map(c=>c.r))).slice(0,3).join(", ")+"). On a Sound Mixer sheet these dilute the " +
+      "headline — keep only the ones whose project name earns its line."]);
+
+  $("#a-list").innerHTML = tips.length
+    ? tips.map(t => '<li class="'+t[0]+'"><span class="dot"></span><span>'+t[1]+"</span></li>").join("")
+    : '<li class="g"><span class="dot"></span><span>Nothing to flag — this reads well as is.</span></li>';
+
+  renderCandidates(need.n, st.wrapped);
+}
+
+/* ---- trim candidates ---- */
+function renderCandidates(needN, wrapped){
+  const wrapKeys = {}; wrapped.forEach(w => wrapKeys[w.k] = w.extra);
+  const list = [];
+  S.sections.forEach((s, si) => {
+    const live = s.credits.filter(c => !c.off).length;
+    s.credits.forEach((c, ci) => {
+      if (c.off || c.pin) return;
+      let score = 0; const why = [];
+      if (JUNIOR.test(c.r)) { score += 3; why.push("not a mixer credit"); }
+      if (wrapKeys[si+":"+ci]) { score += 2; why.push("wraps to 2 lines"); }
+      if (c.c.indexOf("/") < 0) { score += 1; why.push("no producer/director"); }
+      const pos = s.credits.slice(0, ci).filter(x => !x.off).length;
+      if (live > 10 && pos >= live * 0.66) { score += 1.2; why.push("bottom of a long section"); }
+      const firm = (c.c.split("/")[0]||"").trim().toLowerCase();
+      if (firm.length > 2){
+        const n = S.sections.reduce((a,x) => a + x.credits.filter(y =>
+          !y.off && (y.c.split("/")[0]||"").trim().toLowerCase() === firm).length, 0);
+        if (n >= 3){ score += 1; why.push("client repeats ×" + n); }
+      }
+      if (score > 0) list.push({si:si, ci:ci, c:c, score:score, why:why});
+    });
+  });
+  list.sort((a,b) => b.score - a.score);
+  const show = list.slice(0, needN > 0 ? Math.min(needN, list.length) : Math.min(5, list.length));
+  const host = $("#a-cands");
+  if (!show.length){ host.innerHTML = ""; return; }
+  host.innerHTML = "<h3>" + (needN
+      ? "Cut about " + needN + " — weakest lines first"
+      : "Weakest lines, if you want it shorter") + "</h3>";
+  show.forEach(x => {
+    host.append(el("div", {class:"cand"}, [
+      el("span", {class:"nm", title:x.c.p + " — " + x.c.c}, [x.c.p]),
+      el("span", {class:"why"}, [x.why.join(", ")]),
+      el("button", {onclick:() => { x.c.off = true; renderEditor(); layout(); }}, ["Hide"])
+    ]));
+  });
+}
+
+/* =========================================================
+   EDITOR
+   ========================================================= */
+function bind(node, obj, key){
+  node.value = obj[key] || "";
+  node.addEventListener("input", () => { obj[key] = node.value; layout(); });
+  return node;
+}
+let dragSrc = null;
+
+function creditRow(s, si, c, ci){
+  const row = el("div", {class:"crow" + (c.off?" off":"") + (c.pin?" pin":""), draggable:"true"});
+  row.dataset.si = si; row.dataset.ci = ci;
+  row.append(el("span", {class:"grip", title:"Drag to reorder"}, ["⠿"]));
+  row.append(bind(el("input", {class:"in p", placeholder:"Project"}), c, "p"));
+  row.append(bind(el("input", {class:"in r", placeholder:"Position"}), c, "r"));
+  row.append(bind(el("input", {class:"in c", placeholder:"Company / Producer / Director"}), c, "c"));
+  row.append(el("button", {class:"ico"+(c.pin?" on":""), title:"Pin — never suggest cutting this",
+    onclick:() => { c.pin = !c.pin; renderEditor(); layout(); }}, ["★"]));
+  row.append(el("button", {class:"ico"+(c.off?"":" on"), title:c.off?"Show on the CV":"Hide from the CV",
+    onclick:() => { c.off = !c.off; renderEditor(); layout(); }}, [c.off ? "○" : "●"]));
+  row.append(el("button", {class:"ico del", title:"Delete",
+    onclick:() => { s.credits.splice(ci,1); renderEditor(); layout(); }}, ["✕"]));
+
+  row.addEventListener("dragstart", e => {
+    dragSrc = {si:si, ci:ci}; e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain","x");
+  });
+  row.addEventListener("dragover", e => {
+    if (!dragSrc) return;
+    e.preventDefault();
+    const r = row.getBoundingClientRect();
+    row.classList.toggle("drop-before", e.clientY < r.top + r.height/2);
+    row.classList.toggle("drop-after",  e.clientY >= r.top + r.height/2);
+  });
+  row.addEventListener("dragleave", () => row.classList.remove("drop-before","drop-after"));
+  row.addEventListener("dragend", () => { dragSrc = null;
+    document.querySelectorAll(".crow").forEach(r => r.classList.remove("drop-before","drop-after")); });
+  row.addEventListener("drop", e => {
+    e.preventDefault();
+    const after = row.classList.contains("drop-after");
+    row.classList.remove("drop-before","drop-after");
+    if (!dragSrc) return;
+    const moved = S.sections[dragSrc.si].credits.splice(dragSrc.ci, 1)[0];
+    let idx = ci + (after ? 1 : 0);
+    if (dragSrc.si === si && dragSrc.ci < ci) idx--;
+    S.sections[si].credits.splice(idx, 0, moved);
+    dragSrc = null; renderEditor(); layout();
+  });
+  return row;
+}
+
+function renderEditor(){
+  $("#subtitle").textContent = S.name + " · " + totalCredits() + " credits";
+
+  const ct = $("#ed-contact"); ct.innerHTML = "";
+  S.contact.forEach((c, i) => {
+    const row = el("div", {class:"ctrow"});
+    row.append(bind(el("input", {class:"in t", placeholder:"Shown text"}), c, "text"));
+    row.append(bind(el("input", {class:"in l", placeholder:"Link (optional)"}), c, "link"));
+    row.append(el("button", {class:"ico", title:"Move up",
+      onclick:() => { if(i){ S.contact.splice(i-1,0,S.contact.splice(i,1)[0]); renderEditor(); layout(); } }}, ["↑"]));
+    row.append(el("button", {class:"ico del", title:"Delete",
+      onclick:() => { S.contact.splice(i,1); renderEditor(); layout(); }}, ["✕"]));
+    ct.append(row);
+  });
+
+  const host = $("#ed-sections"); host.innerHTML = "";
+  S.sections.forEach((s, si) => {
+    const box = el("div", {class:"sec"});
+    const head = el("header");
+    head.append(bind(el("input", {class:"in", placeholder:"SECTION NAME"}), s, "name"));
+    head.append(el("span", {class:"count"}, [s.credits.filter(c=>!c.off).length + " shown"]));
+    head.append(el("button", {class:"ico", title:"Move section up",
+      onclick:() => { if(si){ S.sections.splice(si-1,0,S.sections.splice(si,1)[0]); renderEditor(); layout(); } }}, ["↑"]));
+    head.append(el("button", {class:"ico", title:"Move section down",
+      onclick:() => { if(si<S.sections.length-1){ S.sections.splice(si+1,0,S.sections.splice(si,1)[0]); renderEditor(); layout(); } }}, ["↓"]));
+    head.append(el("button", {class:"ico del", title:"Delete section",
+      onclick:() => { if(confirm('Delete the whole "'+s.name+'" section?')){ S.sections.splice(si,1); renderEditor(); layout(); } }}, ["✕"]));
+    box.append(head);
+
+    const body = el("div", {class:"body"});
+    s.credits.forEach((c, ci) => body.append(creditRow(s, si, c, ci)));
+    body.append(el("button", {class:"addrow", onclick:() => {
+      s.credits.push({p:"", r:S.role, c:"", off:false, pin:false});
+      renderEditor(); layout();
+      const rows = body.querySelectorAll(".crow");
+      const last = rows[rows.length-1]; if (last) last.querySelector(".in.p").focus();
+    }}, ["+ Add credit to " + (s.name || "section")]));
+    box.append(body);
+    host.append(box);
+  });
+}
+
+/* =========================================================
+   PREVIEW SCALING
+   ========================================================= */
+function scalePreview(){
+  const host = $("#pvhost"), w = host.clientWidth;
+  const k = Math.min(1, (w - 28) / PAGE_W);
+  const x = Math.max(14, (w - PAGE_W * k) / 2);
+  $("#pagewrap").style.transform = "translate(" + x.toFixed(1) + "px,14px) scale(" + k.toFixed(4) + ")";
+  host.style.height = Math.round(PAGE_H * k + 28) + "px";
+}
+addEventListener("resize", scalePreview);
+
+/* =========================================================
+   IMPORT / EXPORT
+   ========================================================= */
+function extractCV(text){
+  /* an artifact bundle keeps the real document inside a JSON string */
+  const b = text.match(/<script type="__bundler\/template"[^>]*>([\s\S]*?)<\/script>/);
+  if (b){ try { return extractCV(JSON.parse(b[1])); } catch(e){} }
+  const i = text.search(/(?:const|let|var|window\.)\s*CV(?:_DATA)?\s*=\s*\{/);
+  if (i < 0) throw new Error("No CV data found in that file.");
+  const start = text.indexOf("{", i);
+  let depth = 0, q = null, esc2 = false, end = -1;
+  for (let j = start; j < text.length; j++){
+    const ch = text[j];
+    if (q){
+      if (esc2) esc2 = false;
+      else if (ch === "\\") esc2 = true;
+      else if (ch === q) q = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") q = ch;
+    else if (ch === "{") depth++;
+    else if (ch === "}" && --depth === 0){ end = j + 1; break; }
+  }
+  if (end < 0) throw new Error("The CV data block looks incomplete.");
+  const lit = text.slice(start, end);
+  try { return JSON.parse(lit); } catch(e){ return Function("return (" + lit + ")")(); }
+}
+
+$("#b-import").onclick = () => $("#file").click();
+$("#file").onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const txt = String(rd.result);
+      const data = f.name.match(/\.json$/i) ? JSON.parse(txt) : extractCV(txt);
+      S = normalize(data);
+      syncOpts(); renderEditor(); layout();
+    } catch (err){ alert("Could not read that file.\n\n" + err.message); }
+  };
+  rd.readAsText(f);
+  e.target.value = "";
+};
+
+function buildExport(){
+  const fs = parseFloat(page.style.getPropertyValue("--fs"));
+  const lh = parseFloat(page.style.getPropertyValue("--lh"));
+  const secfs = parseFloat(page.style.getPropertyValue("--secfs"));
+  const secmt = parseFloat(page.style.getPropertyValue("--secmt"));
+  const legmt = parseFloat(page.style.getPropertyValue("--legmt"));
+  const c = lastCols || manualCols();
+  const pct = v => (v / TOTAL * 100).toFixed(3) + "%";
+  const data = {
+    name:S.name, company:S.company, role:S.role,
+    contact:S.contact.map(x => x.link ? {text:x.text, link:x.link} : {text:x.text}),
+    sections:S.sections.map(s => ({name:s.name,
+      credits:s.credits.filter(x => !x.off).map(x => ({p:x.p, r:x.r, c:x.c}))}))
+        .filter(s => s.credits.length),
+    opts:{autoFit:S.opts.autoFit, autoCols:S.opts.autoCols, target:S.opts.target}
+  };
+  return [
+'<!DOCTYPE html>',
+'<html lang="en"><head>',
+'<meta charset="utf-8">',
+'<title>' + esc(S.name.replace(/\b(\w)(\w*)/g, (m,a,b) => a + b.toLowerCase())) + ' — ' + esc(S.role) + ' CV</title>',
+'<style>',
+'  :root{--paper:#faf9f5;--ink-strong:#14140f;--ink-body:#2e2d29;--ink-soft:#54524b;--ink-faint:#9b998f;--rule:#cbc9c1}',
+'  *{box-sizing:border-box}',
+'  body{margin:0;background:#46443e;font-family:\'Helvetica Neue\',Helvetica,Arial,sans-serif;',
+'    -webkit-print-color-adjust:exact;print-color-adjust:exact}',
+'  #page{width:816px;height:1056px;margin:40px auto;padding:40px 48px;background:var(--paper);',
+'    color:var(--ink-body);overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.45)}',
+'  a{color:inherit;text-decoration:none} a:hover{text-decoration:underline}',
+'  .head{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:9px}',
+'  .name{font-size:31px;font-weight:700;letter-spacing:-.6px;line-height:1;color:var(--ink-strong);white-space:nowrap}',
+'  .company{font-size:8.4px;font-weight:700;letter-spacing:2.6px;color:var(--ink-soft);margin-top:5px;white-space:nowrap}',
+'  .lockup{display:flex;flex-direction:column;align-items:flex-end;gap:7px}',
+'  .lockup img{height:15px;width:auto;display:block}',
+'  .role{font-size:10.5px;font-weight:700;letter-spacing:3.4px;text-transform:uppercase;color:var(--ink-strong);white-space:nowrap}',
+'  .keyline{height:1.5px;background:var(--ink-strong)}',
+'  .contact{display:flex;justify-content:space-between;gap:16px;padding-top:6px;font-size:8.6px;',
+'    letter-spacing:.3px;color:var(--ink-soft);white-space:nowrap}',
+'  table{width:100%;table-layout:fixed;border-collapse:collapse;text-align:left}',
+'  td{padding:0 10px 0 0;vertical-align:top} td:last-child{padding-right:0}',
+'  col.c1{width:' + pct(c.c1) + '} col.c2{width:' + pct(c.c2) + '} col.c3{width:' + pct(c.c3) + '}',
+'  .legend{margin-top:' + legmt.toFixed(1) + 'px;font-size:7.2px;letter-spacing:1.4px;color:var(--ink-faint)}',
+'  .credits{font-size:' + fs.toFixed(2) + 'px;line-height:' + lh.toFixed(2) + 'px;font-weight:400}',
+'  .credits b{font-weight:700}',
+'  .sec{display:flex;align-items:baseline;gap:7px;margin:' + secmt.toFixed(1) + 'px 0 2px}',
+'  .sec-label{font-size:' + secfs.toFixed(2) + 'px;font-weight:700;letter-spacing:1.6px;color:var(--ink-strong);white-space:nowrap}',
+'  .sec-rule{flex:1;height:1px;background:var(--rule)}',
+'  @page{size:8.5in 11in;margin:0}',
+'  @media print{body{background:none}#page{margin:0;box-shadow:none}}',
+'</style>',
+'</head>',
+'<body>',
+'<div id="page">',
+'  <div class="head">',
+'    <div><div class="name" id="f-name"></div><div class="company" id="f-company"></div></div>',
+'    <div class="lockup"><img src="' + LOGO + '" alt=""><div class="role" id="f-role"></div></div>',
+'  </div>',
+'  <div class="keyline"></div>',
+'  <div class="contact" id="f-contact"></div>',
+'  <table class="legend"><colgroup><col class="c1"><col class="c2"><col class="c3"></colgroup>',
+'    <tbody><tr><td>PROJECT</td><td>POSITION</td><td>PRODUCTION CO. / PRODUCER / DIRECTOR</td></tr></tbody></table>',
+'  <div id="f-sections"></div>',
+'</div>',
+'',
+'<script>',
+'/* Generated by CV Updater on ' + new Date().toISOString().slice(0,10) + '.',
+'   Column widths and text size above were fitted to one page for this exact list.',
+'   Edit the data below by hand, or re-open this file in CV Updater with "Import HTML". */',
+'const CV = ' + JSON.stringify(data, null, 2).replace(/<\//g, "<\\/") + ';',
+'',
+'const esc = t => String(t == null ? "" : t).replace(/[&<>"]/g,',
+'  c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\\"":"&quot;"}[c]));',
+'document.getElementById("f-name").textContent = CV.name;',
+'document.getElementById("f-company").textContent = CV.company;',
+'document.getElementById("f-role").textContent = CV.role;',
+'document.getElementById("f-contact").innerHTML = CV.contact.map(c =>',
+'  "<div>" + (c.link ? "<a href=\\"" + esc(c.link) + "\\">" + esc(c.text) + "</a>" : esc(c.text)) + "</div>").join("");',
+'document.getElementById("f-sections").innerHTML = CV.sections.map(s =>',
+'  "<div class=\\"sec\\"><div class=\\"sec-label\\">" + esc(s.name) + "</div><div class=\\"sec-rule\\"></div></div>" +',
+'  "<table class=\\"credits\\"><colgroup><col class=\\"c1\\"><col class=\\"c2\\"><col class=\\"c3\\"></colgroup><tbody>" +',
+'  s.credits.map(r => "<tr><td><b>" + esc(r.p) + "</b></td><td>" + esc(r.r) + "</td><td>" + esc(r.c) + "</td></tr>").join("") +',
+'  "</tbody></table>").join("");',
+'addEventListener("load", () => {',
+'  const p = document.getElementById("page");',
+'  if (p.scrollHeight > p.clientHeight + 2)',
+'    console.warn("CV overflows one page by " + (p.scrollHeight - p.clientHeight) + "px.");',
+'});',
+'<\/script>',
+'</body></html>',
+''].join("\n");
+}
+
+$("#b-export").onclick = () => {
+  const blob = new Blob([buildExport()], {type:"text/html"});
+  const a = el("a", {href:URL.createObjectURL(blob),
+    download:S.name.replace(/\s+/g,"-").toLowerCase() + "-cv.html"});
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+};
+$("#b-print").onclick = () => window.print();
+$("#b-reset").onclick = () => {
+  if (!confirm("Discard your edits and reload the original CV?")) return;
+  S = normalize(SEED); syncOpts(); renderEditor(); layout();
+};
+
+/* =========================================================
+   OPTIONS
+   ========================================================= */
+function syncOpts(){
+  $("#o-fit").checked = S.opts.autoFit;
+  $("#o-cols").checked = S.opts.autoCols;
+  $("#o-marks").checked = S.opts.marks;
+  $("#f-name").value = S.name; $("#f-company").value = S.company; $("#f-role").value = S.role;
+}
+$("#o-fit").onchange   = e => { S.opts.autoFit  = e.target.checked; layout(); };
+$("#o-cols").onchange  = e => { S.opts.autoCols = e.target.checked; layout(); };
+$("#o-marks").onchange = e => { S.opts.marks    = e.target.checked; layout(); };
+["name","company","role"].forEach(k => {
+  $("#f-" + k).addEventListener("input", e => { S[k] = e.target.value; $("#subtitle").textContent =
+    S.name + " · " + totalCredits() + " credits"; layout(); });
+});
+$("#add-contact").onclick = () => { S.contact.push({text:"", link:""}); renderEditor(); layout(); };
+$("#add-section").onclick = () => { S.sections.push({name:"NEW SECTION", credits:[]}); renderEditor(); layout(); };
+
+/* ---------- go ---------- */
+syncOpts(); renderEditor(); layout();
+</script>
+</body>
+</html>

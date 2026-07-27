@@ -1,0 +1,9 @@
+# local editor/agent settings
+.claude/settings.local.json
+
+# macOS
+.DS_Store
+
+# exported CVs land here by default — keep generated output out of the repo
+*-cv.html
+!cv-updater.html
