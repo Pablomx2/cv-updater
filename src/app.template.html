@@ -42,6 +42,16 @@ input{font:inherit;color:inherit}
 .in{width:100%;border:1px solid var(--line);border-radius:5px;padding:6px 7px;background:#fff;font-size:12.5px}
 .in:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 2px rgba(20,20,15,.08)}
 
+.logorow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:5px}
+.logoprev{display:flex;align-items:center;justify-content:center;height:30px;min-width:74px;padding:0 9px;
+  border:1px solid var(--line);border-radius:5px;background:var(--paper);flex:none}
+.logoprev img{max-height:16px;max-width:150px;width:auto;display:block}
+.logoprev.none{color:var(--faint);font-size:10px;letter-spacing:1.2px;text-transform:uppercase;background:#f5f2ea}
+.mini{border:1px solid var(--line);background:#fff;border-radius:5px;padding:6px 11px;font-size:12px;color:var(--ink);flex:none}
+.mini:hover{border-color:var(--ink)}
+.mini:disabled{opacity:.4;cursor:default;border-color:var(--line)}
+.logohint{font-size:11px;color:var(--faint);line-height:1.45;flex:1 1 190px;min-width:0}
+
 .crow,.ctrow{display:flex;align-items:center;gap:5px;padding:3px 0;border-radius:5px}
 .crow{border-bottom:1px solid #f0ede5}
 .crow.flag{background:#fdf6e4;box-shadow:inset 3px 0 0 var(--warn)}
@@ -129,6 +139,8 @@ input{font:inherit;color:inherit}
 .advice li.w .dot{background:var(--warn)} .advice li.b .dot{background:var(--bad)} .advice li.g .dot{background:var(--ok)}
 .cands{border-top:1px solid var(--line);padding:10px 14px}
 .cands h3{margin:0 0 7px;font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--faint)}
+/* cleared sections must not leave their padding and rules behind */
+.bars:empty,.advice:empty,.cands:empty{display:none;padding:0;border:none}
 .cand{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f2efe7;font-size:12px}
 .cand:last-child{border-bottom:none}
 .cand .why{color:var(--soft);font-size:11px}
@@ -172,6 +184,16 @@ input{font:inherit;color:inherit}
         <div class="fld"><label>Company</label><input class="in" id="f-company"></div>
         <div class="fld"><label>Role</label><input class="in" id="f-role"></div>
       </div>
+      <div class="fld" style="margin-top:14px"><label>Logo</label></div>
+      <div class="logorow">
+        <div class="logoprev" id="logo-prev"></div>
+        <button class="mini" id="b-logo">Upload…</button>
+        <button class="mini" id="b-logo-clear">Remove</button>
+        <span class="logohint">Sits top-right, 15px tall. PNG, JPG or SVG — a wide
+          transparent PNG works best. Imported CVs bring their own.</span>
+      </div>
+      <input type="file" id="logofile" accept="image/*" hidden>
+
       <div style="margin-top:14px">
         <div class="fld"><label>Contact line</label></div>
         <div id="ed-contact"></div>
@@ -216,10 +238,8 @@ input{font:inherit;color:inherit}
 
 <script>
 "use strict";
-/* The app ships with no CV in it. Everything below is filled in by Import HTML,
-   or typed from scratch. LOGO is the default lockup; an imported file's own
-   logo replaces it. */
-let LOGO = "__LOGO_URI__";
+/* The app ships with no CV and no logo in it. Both are filled in by Import HTML,
+   by uploading an image, or by typing from scratch. */
 const SEED = __SEED_JSON__;
 const BLANK_SECTIONS = ["FEATURE FILMS","TELEVISION","COMMERCIAL","MUSIC VIDEOS","DIGITAL MEDIA","SHORT FILMS"];
 
@@ -253,6 +273,7 @@ function el(tag, attrs, kids){
 function normalize(d){
   const out = {
     name: dec(d.name||""), company: dec(d.company||""), role: dec(d.role||""),
+    logo: typeof d.logo === "string" && /^data:image\//i.test(d.logo) ? d.logo : "",
     contact: (d.contact||[]).map(c => typeof c === "string"
       ? {text:dec(c), link:""} : {text:dec(c.text||""), link:c.link||""}),
     sections: (d.sections||[]).map(s => ({
@@ -268,9 +289,19 @@ function normalize(d){
 }
 let S = normalize(SEED);
 try { const raw = localStorage.getItem(KEY); if (raw) S = normalize(JSON.parse(raw)); } catch(e){}
-let saveT = 0;
+let saveT = 0, saveWarned = false;
 function save(){ clearTimeout(saveT); saveT = setTimeout(() => {
-  try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }, 250); }
+  try { localStorage.setItem(KEY, JSON.stringify(S)); }
+  catch(e){
+    /* almost always the quota, and silently losing autosave is worse than saying so */
+    if (!saveWarned){
+      saveWarned = true;
+      alert("Your browser would not save this CV locally — it is probably out of storage space " +
+            "(a large logo is the usual cause).\n\nEditing still works, but close the tab and the " +
+            "changes are gone. Use Export HTML to keep them.");
+    }
+  }
+}, 250); }
 
 const visible = () => S.sections.flatMap(s => s.credits.filter(c => !c.off));
 const totalCredits = () => S.sections.reduce((a,s) => a + s.credits.length, 0);
@@ -295,7 +326,7 @@ function pageHTML(){
   return '<div id="sheet">' +
     '<div class="head"><div><div class="name">'+esc(S.name)+'</div>' +
     '<div class="company">'+esc(S.company)+"</div></div>" +
-    '<div class="lockup">'+(LOGO?'<img src="'+LOGO+'" alt="">':"")+
+    '<div class="lockup">'+(S.logo?'<img src="'+esc(S.logo)+'" alt="">':"")+
     '<div class="role">'+esc(S.role)+"</div></div></div>" +
     '<div class="keyline"></div><div class="contact">'+contact+"</div>" +
     '<table class="legend">'+cols+"<tbody><tr><td>PROJECT</td><td>POSITION</td>" +
@@ -428,7 +459,8 @@ function layout(){
       if (tr.getBoundingClientRect().bottom - top > AVAIL) tr.classList.add("over");
     });
   }
-  $("#pvhost").classList.toggle("empty", isEmpty());
+  /* an uploaded logo is worth showing even before there is a CV around it */
+  $("#pvhost").classList.toggle("empty", isEmpty() && !S.logo);
   advise({d:d, fs:m.fs, lh:m.lh, h:h, fits:fits, wrapped:wrapped});
   scalePreview();
   save();
@@ -745,6 +777,37 @@ function extractCV(text){
   try { return JSON.parse(lit); } catch(e){ return Function("return (" + lit + ")")(); }
 }
 
+/* ---------- logo ---------- */
+const LOGO_MAX = 512 * 1024;   /* keeps the saved state inside the localStorage quota */
+
+function renderLogo(){
+  const box = $("#logo-prev");
+  box.innerHTML = "";
+  box.classList.toggle("none", !S.logo);
+  if (S.logo) box.append(el("img", {src:S.logo, alt:"Logo"}));
+  else box.textContent = "No logo";
+  $("#b-logo-clear").disabled = !S.logo;
+}
+
+$("#b-logo").onclick = () => $("#logofile").click();
+$("#b-logo-clear").onclick = () => { S.logo = ""; renderLogo(); layout(); };
+$("#logofile").onchange = e => {
+  const f = e.target.files[0];
+  e.target.value = "";
+  if (!f) return;
+  if (!/^image\//.test(f.type)){ alert("That is not an image file."); return; }
+  if (f.size > LOGO_MAX){
+    alert("That image is " + Math.round(f.size/1024) + "KB. The logo prints 15px tall, so " +
+          "anything over 512KB is wasted weight and will not fit in the browser's saved state — " +
+          "export a smaller PNG or an SVG.");
+    return;
+  }
+  const rd = new FileReader();
+  rd.onload = () => { S.logo = String(rd.result); renderLogo(); layout(); };
+  rd.onerror = () => alert("Could not read that image.");
+  rd.readAsDataURL(f);
+};
+
 /* Pull the lockup image out of an imported file so it travels with the CV. */
 function extractLogo(text){
   const m = text.match(/<img[^>]+src="(data:image\/[\w.+-]+;base64,[^"]+)"/i);
@@ -757,7 +820,7 @@ function extractLogo(text){
       const uuid = JSON.parse(t[1]).match(/<img[^>]+src="([0-9a-f-]{36})"/i);
       const man  = JSON.parse(g[1]);
       const e    = uuid && man[uuid[1]];
-      /* compressed entries would need gunzipping — fall back to the built-in logo instead */
+      /* compressed entries would need gunzipping — the CV just comes in without a logo */
       if (e && !e.compressed && /^image\//.test(e.mime)) return "data:" + e.mime + ";base64," + e.data;
     } catch (err){}
   }
@@ -771,10 +834,12 @@ $("#file").onchange = e => {
   rd.onload = () => {
     try {
       const txt = String(rd.result);
-      const data = f.name.match(/\.json$/i) ? JSON.parse(txt) : extractCV(txt);
-      const lg = f.name.match(/\.json$/i) ? null : extractLogo(txt);
-      if (lg) LOGO = lg;
+      const isJson = !!f.name.match(/\.json$/i);
+      const data = isJson ? JSON.parse(txt) : extractCV(txt);
       S = normalize(data);
+      /* the file's own logo wins; importing a CV without one clears the old logo
+         rather than leaving the previous CV's mark on it */
+      if (!isJson) S.logo = extractLogo(txt) || "";
       syncOpts(); renderEditor(); layout();
     } catch (err){ alert("Could not read that file.\n\n" + err.message); }
   };
@@ -837,7 +902,8 @@ function buildExport(){
 '<div id="page">',
 '  <div class="head">',
 '    <div><div class="name" id="f-name"></div><div class="company" id="f-company"></div></div>',
-'    <div class="lockup"><img src="' + LOGO + '" alt=""><div class="role" id="f-role"></div></div>',
+'    <div class="lockup">' + (S.logo ? '<img src="' + esc(S.logo) + '" alt="">' : "") +
+  '<div class="role" id="f-role"></div></div>',
 '  </div>',
 '  <div class="keyline"></div>',
 '  <div class="contact" id="f-contact"></div>',
@@ -896,6 +962,7 @@ function syncOpts(){
   $("#o-cols").checked = S.opts.autoCols;
   $("#o-marks").checked = S.opts.marks;
   $("#f-name").value = S.name; $("#f-company").value = S.company; $("#f-role").value = S.role;
+  renderLogo();
 }
 $("#o-fit").onchange   = e => { S.opts.autoFit  = e.target.checked; layout(); };
 $("#o-cols").onchange  = e => { S.opts.autoCols = e.target.checked; layout(); };

@@ -4,8 +4,8 @@ A single-file app for keeping a film-credits CV on one page.
 
 **Open `cv-updater.html` in a browser.** No install, no server, no internet needed.
 
-The app ships **empty** — no CV is stored in it. Use **Import HTML…** to load one
-(an export from this app, or the original bundled artifact download); the contact line,
+The app ships **empty** — no CV and no logo are stored in it. Use **Import HTML…** to load
+one (an export from this app, or the original bundled artifact download); the contact line,
 sections, every credit and the logo all come across. Or press **Start a blank CV** and type.
 
 `index.html` is the project page — a short write-up with a link that launches the app.
@@ -15,6 +15,12 @@ It doubles as the GitHub Pages landing page.
 
 **Edit** — name, company, role, contact line, sections and credits, all live.
 Drag the ⠿ handle to reorder a credit, including across sections.
+
+**Logo** — there is no logo to start with. It arrives one of two ways: importing a CV
+lifts the lockup image out of that file, or **Upload…** takes a PNG, JPG or SVG from your
+machine. It prints 15px tall at the top right, so keep the file small (512KB ceiling —
+a wide transparent PNG or an SVG is ideal). **Remove** takes it off again, and exports
+simply omit the image when there is no logo.
 
 **Auto-fit to one page** — binary-searches the largest credit text size that still
 fits 8.5×11in, never shrinking the header. Capped at the original design size (9.2px),
@@ -57,6 +63,5 @@ and run:
 node src/build.js
 ```
 
-`src/seed.json` is the state the app starts in — deliberately empty, so no CV lives in
-this repo. `src/logo.b64` is the default lockup (`assets/logo.png` is the same image,
-decoded, for the project page); an imported file's own logo overrides it at runtime.
+`src/seed.json` is the state the app starts in — deliberately empty, so neither a CV nor
+a logo lives in this repo.
