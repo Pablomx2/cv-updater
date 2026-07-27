@@ -78,6 +78,18 @@ input{font:inherit;color:inherit}
 /* #pagewrap is taken out of flow so the 816px sheet never widens the app layout */
 #pvhost{position:relative;overflow:hidden;background:#46443e;border-radius:0 0 9px 9px}
 #pagewrap{position:absolute;top:0;left:0;transform-origin:top left}
+#pvempty{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+  text-align:center;color:#b6b2a8;font-size:13px;line-height:1.7;padding:24px}
+#pvempty b{color:var(--paper)}
+#pvhost.empty #pagewrap{opacity:.25}
+#pvhost.empty #pvempty{display:flex}
+
+.blank{border:1px dashed var(--line);border-radius:8px;padding:18px 16px;text-align:center;color:var(--soft);font-size:12.5px;line-height:1.6}
+.blank p{margin:0 0 12px}
+.blank .row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.blank button{border:1px solid var(--ink);background:var(--ink);color:var(--paper);border-radius:6px;padding:7px 13px;font-size:12px;font-weight:700}
+.blank button.alt{background:transparent;color:var(--ink);font-weight:400}
+.blank button:hover{opacity:.85}
 #page{width:816px;height:1056px;padding:40px 48px;background:var(--paper);color:var(--body);overflow:hidden;
   box-shadow:0 14px 40px rgba(0,0,0,.45);
   --fs:9.2px;--lh:12.5px;--secfs:8.6px;--secmt:8px;--legmt:14px;--c1:245px;--c2:137px;--c3:338px}
@@ -106,6 +118,7 @@ input{font:inherit;color:inherit}
 .grade{display:flex;align-items:center;gap:11px;padding:12px 14px;border-bottom:1px solid var(--line)}
 .badge{font-size:10px;font-weight:700;letter-spacing:1.6px;padding:5px 9px;border-radius:5px;color:#fff;white-space:nowrap}
 .badge.ok{background:var(--ok)} .badge.warn{background:var(--warn)} .badge.bad{background:var(--bad)}
+.badge.idle{background:var(--faint)}
 .grade .txt{font-size:12px;line-height:1.45}
 .grade .txt b{color:var(--ink)}
 .bars{display:flex;gap:14px;padding:8px 14px;border-bottom:1px solid var(--line);font-size:11px;color:var(--soft);flex-wrap:wrap}
@@ -144,7 +157,7 @@ input{font:inherit;color:inherit}
   <h1>CV Updater</h1>
   <span class="sub" id="subtitle"></span>
   <button class="btn" id="b-import">Import HTML…</button>
-  <button class="btn" id="b-reset">Reset</button>
+  <button class="btn" id="b-clear">Clear</button>
   <button class="btn" id="b-export">Export HTML</button>
   <button class="btn primary" id="b-print">Print / PDF</button>
   <input type="file" id="file" accept=".html,.htm,.json" hidden>
@@ -191,7 +204,9 @@ input{font:inherit;color:inherit}
         <span>text <code id="o-fs">9.2px</code></span>
         <span>cols <code id="o-cw">—</code></span>
       </div>
-      <div id="pvhost"><div id="pagewrap"><div id="page"></div></div></div>
+      <div id="pvhost"><div id="pagewrap"><div id="page"></div></div>
+        <div id="pvempty"><div>Nothing loaded yet.<br>Use <b>Import HTML…</b> to bring in a CV.</div></div>
+      </div>
     </div>
     <div class="hint">Auto-fit only shrinks the credit text, never the header. Column widths are chosen to minimise
       wrapped lines. Nothing is deleted automatically — the eye icon hides a credit so you can test a shorter list,
@@ -201,8 +216,12 @@ input{font:inherit;color:inherit}
 
 <script>
 "use strict";
-const LOGO = "__LOGO_URI__";
+/* The app ships with no CV in it. Everything below is filled in by Import HTML,
+   or typed from scratch. LOGO is the default lockup; an imported file's own
+   logo replaces it. */
+let LOGO = "__LOGO_URI__";
 const SEED = __SEED_JSON__;
+const BLANK_SECTIONS = ["FEATURE FILMS","TELEVISION","COMMERCIAL","MUSIC VIDEOS","DIGITAL MEDIA","SHORT FILMS"];
 
 /* ---------- constants ---------- */
 const PAGE_W=816, PAGE_H=1056, PAD_X=48, PAD_Y=40;
@@ -255,6 +274,7 @@ function save(){ clearTimeout(saveT); saveT = setTimeout(() => {
 
 const visible = () => S.sections.flatMap(s => s.credits.filter(c => !c.off));
 const totalCredits = () => S.sections.reduce((a,s) => a + s.credits.length, 0);
+const isEmpty = () => !S.name && !S.company && !S.role && !S.contact.length && !totalCredits();
 
 /* =========================================================
    PAGE RENDERING
@@ -408,6 +428,7 @@ function layout(){
       if (tr.getBoundingClientRect().bottom - top > AVAIL) tr.classList.add("over");
     });
   }
+  $("#pvhost").classList.toggle("empty", isEmpty());
   advise({d:d, fs:m.fs, lh:m.lh, h:h, fits:fits, wrapped:wrapped});
   scalePreview();
   save();
@@ -434,6 +455,19 @@ function grade(fs, fits){
 
 function advise(st){
   const vis = visible().length, all = totalCredits();
+
+  if (isEmpty()){
+    $("#a-badge").className = "badge idle";
+    $("#a-badge").textContent = "NO CV";
+    $("#a-summary").innerHTML = "Nothing loaded yet. <b>Import HTML…</b> takes a CV exported from " +
+      "this app, or the original bundled artifact download — the contact line, sections and every " +
+      "credit come across. Or start a blank one and type.";
+    $("#a-bars").innerHTML = "";
+    $("#a-list").innerHTML = "";
+    $("#a-cands").innerHTML = "";
+    return;
+  }
+
   const g = grade(st.fs, st.fits);
   $("#a-badge").className = "badge " + g.cls;
   $("#a-badge").textContent = g.label;
@@ -561,6 +595,12 @@ function renderCandidates(needN, wrapped){
 /* =========================================================
    EDITOR
    ========================================================= */
+function setSubtitle(){
+  const n = totalCredits();
+  $("#subtitle").textContent = isEmpty() ? "no CV loaded"
+    : [S.name, n + " credit" + (n === 1 ? "" : "s")].filter(Boolean).join(" · ");
+}
+
 function bind(node, obj, key){
   node.value = obj[key] || "";
   node.addEventListener("input", () => { obj[key] = node.value; layout(); });
@@ -611,7 +651,7 @@ function creditRow(s, si, c, ci){
 }
 
 function renderEditor(){
-  $("#subtitle").textContent = S.name + " · " + totalCredits() + " credits";
+  setSubtitle();
 
   const ct = $("#ed-contact"); ct.innerHTML = "";
   S.contact.forEach((c, i) => {
@@ -626,6 +666,19 @@ function renderEditor(){
   });
 
   const host = $("#ed-sections"); host.innerHTML = "";
+  if (!S.sections.length){
+    const b = el("div", {class:"blank"});
+    b.append(el("p", {}, ["No CV loaded. Bring one in, or start typing a blank one."]));
+    const row = el("div", {class:"row"});
+    row.append(el("button", {onclick:() => $("#file").click()}, ["Import HTML…"]));
+    row.append(el("button", {class:"alt", onclick:() => {
+      if (!S.contact.length) S.contact = [{text:"",link:""},{text:"",link:""},{text:"",link:""}];
+      S.sections = BLANK_SECTIONS.map(n => ({name:n, credits:[{p:"",r:"",c:"",off:false,pin:false}]}));
+      renderEditor(); layout(); $("#f-name").focus();
+    }}, ["Start a blank CV"]));
+    b.append(row);
+    host.append(b);
+  }
   S.sections.forEach((s, si) => {
     const box = el("div", {class:"sec"});
     const head = el("header");
@@ -692,6 +745,25 @@ function extractCV(text){
   try { return JSON.parse(lit); } catch(e){ return Function("return (" + lit + ")")(); }
 }
 
+/* Pull the lockup image out of an imported file so it travels with the CV. */
+function extractLogo(text){
+  const m = text.match(/<img[^>]+src="(data:image\/[\w.+-]+;base64,[^"]+)"/i);
+  if (m) return m[1];
+  /* an artifact bundle keeps the image in its manifest, keyed by the uuid the document references */
+  const t = text.match(/<script type="__bundler\/template"[^>]*>([\s\S]*?)<\/script>/);
+  const g = text.match(/<script type="__bundler\/manifest"[^>]*>([\s\S]*?)<\/script>/);
+  if (t && g){
+    try {
+      const uuid = JSON.parse(t[1]).match(/<img[^>]+src="([0-9a-f-]{36})"/i);
+      const man  = JSON.parse(g[1]);
+      const e    = uuid && man[uuid[1]];
+      /* compressed entries would need gunzipping — fall back to the built-in logo instead */
+      if (e && !e.compressed && /^image\//.test(e.mime)) return "data:" + e.mime + ";base64," + e.data;
+    } catch (err){}
+  }
+  return null;
+}
+
 $("#b-import").onclick = () => $("#file").click();
 $("#file").onchange = e => {
   const f = e.target.files[0]; if (!f) return;
@@ -700,6 +772,8 @@ $("#file").onchange = e => {
     try {
       const txt = String(rd.result);
       const data = f.name.match(/\.json$/i) ? JSON.parse(txt) : extractCV(txt);
+      const lg = f.name.match(/\.json$/i) ? null : extractLogo(txt);
+      if (lg) LOGO = lg;
       S = normalize(data);
       syncOpts(); renderEditor(); layout();
     } catch (err){ alert("Could not read that file.\n\n" + err.message); }
@@ -801,6 +875,7 @@ function buildExport(){
 }
 
 $("#b-export").onclick = () => {
+  if (isEmpty()){ alert("There is no CV to export yet — import one, or start a blank one."); return; }
   const blob = new Blob([buildExport()], {type:"text/html"});
   const a = el("a", {href:URL.createObjectURL(blob),
     download:S.name.replace(/\s+/g,"-").toLowerCase() + "-cv.html"});
@@ -808,8 +883,8 @@ $("#b-export").onclick = () => {
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 };
 $("#b-print").onclick = () => window.print();
-$("#b-reset").onclick = () => {
-  if (!confirm("Discard your edits and reload the original CV?")) return;
+$("#b-clear").onclick = () => {
+  if (!confirm("Clear the CV in the editor and start empty?\n\nExport first if you want to keep it.")) return;
   S = normalize(SEED); syncOpts(); renderEditor(); layout();
 };
 
@@ -826,8 +901,7 @@ $("#o-fit").onchange   = e => { S.opts.autoFit  = e.target.checked; layout(); };
 $("#o-cols").onchange  = e => { S.opts.autoCols = e.target.checked; layout(); };
 $("#o-marks").onchange = e => { S.opts.marks    = e.target.checked; layout(); };
 ["name","company","role"].forEach(k => {
-  $("#f-" + k).addEventListener("input", e => { S[k] = e.target.value; $("#subtitle").textContent =
-    S.name + " · " + totalCredits() + " credits"; layout(); });
+  $("#f-" + k).addEventListener("input", e => { S[k] = e.target.value; setSubtitle(); layout(); });
 });
 $("#add-contact").onclick = () => { S.contact.push({text:"", link:""}); renderEditor(); layout(); };
 $("#add-section").onclick = () => { S.sections.push({name:"NEW SECTION", credits:[]}); renderEditor(); layout(); };

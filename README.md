@@ -1,12 +1,15 @@
 # CV Updater
 
-A single-file app for keeping the sound-mixer CV on one page.
+A single-file app for keeping a film-credits CV on one page.
 
-**Open `cv-updater.html` in a browser.** No install, no server, no internet needed —
-everything (including the Still Speeding logo) is baked into that one file.
+**Open `cv-updater.html` in a browser.** No install, no server, no internet needed.
+
+The app ships **empty** — no CV is stored in it. Use **Import HTML…** to load one
+(an export from this app, or the original bundled artifact download); the contact line,
+sections, every credit and the logo all come across. Or press **Start a blank CV** and type.
 
 `index.html` is the project page — a short write-up with a link that launches the app.
-It doubles as the GitHub Pages landing page if this repo is ever published.
+It doubles as the GitHub Pages landing page.
 
 ## What it does
 
@@ -39,10 +42,11 @@ list without losing it; **★** pins a credit so the advisor never suggests cutt
 | **Import HTML…** | Loads a CV back in — a file exported here, or the original bundled artifact download. |
 | **Export HTML** | Writes a clean standalone CV with the fitted column widths and text size baked in. Still hand-editable, still re-importable. |
 | **Print / PDF** | Prints just the page. In the print dialog choose **Save as PDF**, paper **US Letter**, margins **None**, and turn **off** headers/footers. |
-| **Reset** | Back to the CV as of 26 Jul 2026. |
+| **Clear** | Empties the editor and starts over. Export first if you want to keep what is there. |
 
 Edits autosave to the browser's local storage, so closing the tab does not lose work.
-That storage is per-browser — use **Export HTML** for anything you want to keep or send.
+That storage is per-browser and per-machine — use **Export HTML** for anything you want
+to keep or send.
 
 ## Rebuilding
 
@@ -53,13 +57,6 @@ and run:
 node src/build.js
 ```
 
-`src/seed.json` is the CV that **Reset** restores; `src/logo.b64` is the logo data URI
-(`assets/logo.png` is the same image, decoded, for the project page).
-
-## A note on what is in this repo
-
-`src/seed.json` and `cv-updater.html` both contain the real CV — including the phone
-number and email on the contact line. That is fine in a private repo. Before making it
-public, either accept that those are published, or replace the contact entries in
-`src/seed.json` with placeholders and rebuild; the real CV can then be loaded with
-**Import HTML** instead of shipping inside the app.
+`src/seed.json` is the state the app starts in — deliberately empty, so no CV lives in
+this repo. `src/logo.b64` is the default lockup (`assets/logo.png` is the same image,
+decoded, for the project page); an imported file's own logo overrides it at runtime.

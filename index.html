@@ -101,14 +101,16 @@
   edits the credit list, sizes the type and columns to fill exactly one sheet, and tells you when
   the list has outgrown the page.</p>
 
-  <p class="sub">No install, no build step, no server, no internet. Open the file, edit, print.
-  Everything — logo included — is baked into one document you can email to yourself.</p>
+  <p class="sub">No install, no build step, no server, no internet. The app ships empty —
+  drop in an existing CV with <b>Import HTML</b> and it picks up the contact line, every
+  section and credit, and the logo. Or start blank and type.</p>
 
   <div class="cta">
     <a class="btn" href="cv-updater.html">Open the app</a>
     <a class="btn ghost" href="#how">How it works</a>
   </div>
-  <p class="note">Runs entirely in your browser. Nothing is uploaded anywhere.</p>
+  <p class="note">Runs entirely in your browser. Nothing is uploaded anywhere, and no CV is
+  stored in this repository.</p>
 
   <div class="sec"><h2>What it does</h2><div class="r"></div></div>
   <div class="grid">
@@ -133,7 +135,8 @@
     <div>
       <h3>Never deletes anything</h3>
       <p>Hide a credit to test a shorter list without losing it. Pin one so the advisor leaves it
-      alone. Drag to reorder, across sections. Edits autosave locally.</p>
+      alone. Drag to reorder, across sections. Edits autosave to your own browser and go nowhere
+      else.</p>
     </div>
   </div>
 
@@ -194,7 +197,9 @@
 
   <div class="sec" id="how"><h2>How it works</h2><div class="r"></div></div>
   <ol class="steps">
-    <li><b>Open <code>cv-updater.html</code></b> in any browser. The current CV loads straight away.</li>
+    <li><b>Open <code>cv-updater.html</code></b> in any browser, then <b>Import HTML…</b> to load a CV —
+      one exported from this app, or the original bundled artifact download. <b>Start a blank CV</b>
+      sets up the usual sections if you would rather type.</li>
     <li><b>Edit.</b> Change any field and the preview refits instantly. Drag the ⠿ handle to reorder
       a credit, including into another section.</li>
     <li><b>Read the advice.</b> The panel grades the page and names the specific lines worth cutting.
@@ -205,10 +210,10 @@
 
   <div class="sec"><h2>Buttons</h2><div class="r"></div></div>
   <table class="keys">
-    <tr><td>Import HTML</td><td>Reads a CV back in — one exported here, or the original bundled artifact download.</td></tr>
+    <tr><td>Import HTML</td><td>Reads a CV in — one exported here, or the original bundled artifact download. Brings the logo with it.</td></tr>
     <tr><td>Export HTML</td><td>A standalone CV with the fitted column widths and text size baked in.</td></tr>
     <tr><td>Print / PDF</td><td>Prints the sheet alone. Choose US Letter, margins <b>None</b>, headers and footers off.</td></tr>
-    <tr><td>Reset</td><td>Back to the CV the app shipped with.</td></tr>
+    <tr><td>Clear</td><td>Empties the editor and starts over.</td></tr>
   </table>
   <p class="note">Edits autosave to the browser's local storage, which is per-browser and per-machine.
   Use <b>Export HTML</b> for anything you want to keep or send.</p>
@@ -216,7 +221,8 @@
   <div class="sec"><h2>Building it</h2><div class="r"></div></div>
   <p class="sub"><code>cv-updater.html</code> is generated. To change the app itself, edit
   <code>src/app.template.html</code> and run <code>node src/build.js</code>. <code>src/seed.json</code>
-  is the CV that <b>Reset</b> restores; <code>src/logo.b64</code> is the logo.</p>
+  is the state the app starts in — deliberately empty, so no CV lives in this repository;
+  <code>src/logo.b64</code> is the default lockup.</p>
 
   <footer>
     Built for <a href="https://pablomenaa.com">Pablo Mena</a> · Still Speeding LLC.
