@@ -779,9 +779,16 @@ function bind(node, obj, key){
 let dragSrc = null;
 
 function creditRow(s, si, c, ci){
-  const row = el("div", {class:"crow" + (c.off?" off":"") + (c.pin?" pin":""), draggable:"true"});
+  const row = el("div", {class:"crow" + (c.off?" off":"") + (c.pin?" pin":"")});
   row.dataset.si = si; row.dataset.ci = ci;
-  row.append(el("span", {class:"grip", title:"Drag to reorder"}, ["⠿"]));
+  /* The row is only draggable while the handle is held. A permanently draggable
+     row swallows mousedown inside its inputs, so the text cannot be selected. */
+  const grip = el("span", {class:"grip", title:"Drag to reorder"}, ["⠿"]);
+  grip.addEventListener("pointerdown", () => {
+    row.draggable = true;
+    addEventListener("pointerup", () => { row.draggable = false; }, {once:true});
+  });
+  row.append(grip);
   row.append(bind(el("input", {class:"in p", placeholder:"Project"}), c, "p"));
   row.append(bind(el("input", {class:"in r", placeholder:"Position"}), c, "r"));
   row.append(bind(el("input", {class:"in c", placeholder:"Company / Producer / Director"}), c, "c"));
@@ -804,7 +811,8 @@ function creditRow(s, si, c, ci){
     row.classList.toggle("drop-after",  e.clientY >= r.top + r.height/2);
   });
   row.addEventListener("dragleave", () => row.classList.remove("drop-before","drop-after"));
-  row.addEventListener("dragend", () => { dragSrc = null;
+  /* a real drag ends here rather than in pointerup, so disarm in both places */
+  row.addEventListener("dragend", () => { row.draggable = false; dragSrc = null;
     document.querySelectorAll(".crow").forEach(r => r.classList.remove("drop-before","drop-after")); });
   row.addEventListener("drop", e => {
     e.preventDefault();
