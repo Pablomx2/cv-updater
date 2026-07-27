@@ -14,7 +14,12 @@ It doubles as the GitHub Pages landing page.
 ## What it does
 
 **Edit** — name, company, role, contact line, sections and credits, all live.
+New credits are added to the **top** of their section, where the newest job belongs.
 Drag the ⠿ handle to reorder a credit, including across sections.
+
+**Override the automatics** — hover the sheet and drag either column divider to set the
+widths by hand, or move the text slider in the preview bar to set the size. Each switches
+the matching checkbox off; tick it again to hand control back.
 
 **Logo** — there is no logo to start with. It arrives one of two ways: importing a CV
 lifts the lockup image out of that file, or **Upload…** takes a PNG, JPG or SVG from your
@@ -29,7 +34,7 @@ so it never blows the type up to fill space.
 **Auto columns** — measures every project title and production-company string and picks
 the three column widths that produce the fewest wrapped lines, then re-checks them at the
 fitted text size. Wrapped lines are the main hidden cost on a dense sheet: each one eats a
-credit's worth of space.
+credit's worth of space. Or drag the dividers and set the widths yourself.
 
 **Advice** — a readability grade plus specifics:
 - how many credits to cut to get back to comfortable text size

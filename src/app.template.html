@@ -78,6 +78,7 @@ input{font:inherit;color:inherit}
 .sec .count{font-size:10px;color:var(--faint);white-space:nowrap;padding:0 4px}
 .sec .body{padding:4px 8px 8px}
 .addrow{margin-top:6px;background:#fff;border:1px dashed var(--line);border-radius:5px;padding:5px 9px;font-size:11.5px;color:var(--soft);width:100%;text-align:left}
+.addrow.top{margin:2px 0 7px}
 .addrow:hover{border-color:var(--ink);color:var(--ink)}
 
 /* ---------- preview ---------- */
@@ -85,9 +86,22 @@ input{font:inherit;color:inherit}
 .pvbar label{display:flex;align-items:center;gap:5px;cursor:pointer}
 .pvbar .spacer{margin-left:auto}
 .pvbar code{font-size:11px;color:var(--ink);background:#f2efe7;padding:2px 5px;border-radius:4px}
+.sizectl{display:flex;align-items:center;gap:7px;cursor:pointer}
+.sizectl input[type=range]{width:94px;accent-color:var(--ink);cursor:col-resize}
+.sizectl code{min-width:44px;text-align:center}
 /* #pagewrap is taken out of flow so the 816px sheet never widens the app layout */
 #pvhost{position:relative;overflow:hidden;background:#46443e;border-radius:0 0 9px 9px}
 #pagewrap{position:absolute;top:0;left:0;transform-origin:top left}
+/* column dividers, laid over the preview — shown on hover so the sheet reads clean otherwise */
+.colgrab{position:absolute;width:13px;margin-left:-6px;z-index:5;cursor:col-resize;
+  opacity:0;transition:opacity .12s}
+.colgrab::before{content:"";position:absolute;left:6px;top:0;bottom:0;width:1px;background:var(--ink);opacity:.35}
+.colgrab::after{content:"";position:absolute;left:2px;top:-9px;width:9px;height:9px;border-radius:2px;background:var(--ink)}
+#pvhost:hover .colgrab{opacity:.75}
+.colgrab:hover,.colgrab.on{opacity:1!important}
+.colgrab:hover::before,.colgrab.on::before{opacity:1;width:2px}
+#pvhost.empty .colgrab{display:none}
+
 #pvempty{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
   text-align:center;color:#b6b2a8;font-size:13px;line-height:1.7;padding:24px}
 #pvempty b{color:var(--paper)}
@@ -160,6 +174,7 @@ input{font:inherit;color:inherit}
   #pagewrap{position:static!important;transform:none!important}
   #page{box-shadow:none;margin:0}
   #page tr.over td,#page tr.wrap2 td{background:none!important}   /* never print the review marks */
+  .colgrab{display:none!important}
 }
 </style>
 </head>
@@ -223,16 +238,23 @@ input{font:inherit;color:inherit}
         <label><input type="checkbox" id="o-cols" checked> Auto columns</label>
         <label><input type="checkbox" id="o-marks"> Mark problem rows</label>
         <span class="spacer"></span>
-        <span>text <code id="o-fs">9.2px</code></span>
+        <label class="sizectl" title="Credit text size — moving this switches auto-fit off">text
+          <input type="range" id="o-size" min="6.5" max="12" step="0.1" value="9.2">
+          <code id="o-fs">9.2px</code>
+        </label>
         <span>cols <code id="o-cw">—</code></span>
       </div>
-      <div id="pvhost"><div id="pagewrap"><div id="page"></div></div>
+      <div id="pvhost"><div id="pagewrap"><div id="page"></div>
+          <div class="colgrab" id="grab1" title="Drag to resize — switches auto columns off"></div>
+          <div class="colgrab" id="grab2" title="Drag to resize — switches auto columns off"></div>
+        </div>
         <div id="pvempty"><div>Nothing loaded yet.<br>Use <b>Import HTML…</b> to bring in a CV.</div></div>
       </div>
     </div>
     <div class="hint">Auto-fit only shrinks the credit text, never the header. Column widths are chosen to minimise
-      wrapped lines. Nothing is deleted automatically — the eye icon hides a credit so you can test a shorter list,
-      the pin icon protects it from trim suggestions.</div>
+      wrapped lines. To override either, drag a column divider on the sheet or move the text slider — that switches
+      the matching checkbox off; tick it again to hand control back. Nothing is deleted automatically — the ● icon
+      hides a credit so you can test a shorter list, the ★ icon protects it from trim suggestions.</div>
   </section>
 </div>
 
@@ -249,6 +271,7 @@ const TOTAL = PAGE_W - PAD_X*2;      /* 720px of usable width  */
 const AVAIL = PAGE_H - PAD_Y*2;      /* 976px of usable height */
 const BASE  = {fs:9.2, lh:12.5, secfs:8.6, secmt:8, legmt:14};
 const GUT   = 10;                    /* column gutter, px */
+const SLACK = 3;                     /* breathing room so a measured-exact fit still fits */
 const KEY   = "cv-updater.v1";
 const JUNIOR = /\b(boom|utility|playback|a2|a\.?2|assistant|add\.?|additional|second|2nd|swing|trainee|intern|pa)\b/i;
 
@@ -347,7 +370,10 @@ function computeCols(fs){
   mctx.font = FONT(700, 7.2);
   const legend = Math.max(mctx.measureText("PROJECT").width, 40);
 
-  const c2 = Math.min(Math.max(Math.max.apply(null, w2), 46) + GUT, TOTAL * 0.24);
+  /* the position column is sized to its longest entry, so it needs a little slack —
+     sized to exactly the measured width, sub-pixel rounding tips it into wrapping */
+  const c2 = Math.min(Math.max(Math.max.apply(null, w2), 46) + GUT + SLACK, TOTAL * 0.24);
+  const a2 = c2 - GUT;
   const R  = TOTAL - c2;
   let best = null;
   for (let c1 = Math.round(R*0.28); c1 <= Math.round(R*0.72); c1 += 2){
@@ -355,7 +381,7 @@ function computeCols(fs){
     if (a1 < legend + 20 || a3 < 90) continue;
     let lines = 0;
     for (let i = 0; i < rows.length; i++){
-      lines += Math.max(Math.ceil(w1[i]/a1) || 1, Math.ceil(w3[i]/a3) || 1);
+      lines += Math.max(Math.ceil(w1[i]/a1) || 1, Math.ceil(w2[i]/a2) || 1, Math.ceil(w3[i]/a3) || 1);
     }
     /* tie-break: leave comparable breathing room on both text columns */
     const bal = Math.abs(Math.max.apply(null,w1)/a1 - Math.max.apply(null,w3)/a3);
@@ -419,9 +445,13 @@ function solve(){
     if (d == null) applyDensity(0.55);
     return {d:(d == null ? 0.55 : d), fits:d != null};
   }
+  if (!S.opts.autoFit){
+    /* size columns for the text size actually in force, not the design one */
+    applyCols(computeCols(BASE.fs * S.opts.density));
+    applyDensity(S.opts.density);
+    return {d:S.opts.density, fits:sheetH() <= AVAIL + 0.5};
+  }
   const cA = computeCols(BASE.fs);
-  if (!S.opts.autoFit){ applyCols(cA); applyDensity(S.opts.density);
-    return {d:S.opts.density, fits:sheetH() <= AVAIL + 0.5}; }
   const dA = fitFixed(cA);
   if (dA === 1) return {d:1, fits:true};
   const cB = computeCols(BASE.fs * (dA == null ? 0.55 : dA));
@@ -439,9 +469,8 @@ function layout(){
   page.innerHTML = pageHTML();
   const r = solve();
   const d = r.d, fits = r.fits, m = lastM, h = sheetH();
-  $("#o-fs").textContent = m.fs.toFixed(1) + "px";
-  $("#o-cw").textContent = lastCols
-    ? [lastCols.c1, lastCols.c2, lastCols.c3].map(v => Math.round(v/TOTAL*100)+"%").join(" / ") : "—";
+  showSize(m.fs);
+  showCols(lastCols);
 
   /* how many rows wrap onto a second line */
   const wrapped = [];
@@ -463,7 +492,17 @@ function layout(){
   $("#pvhost").classList.toggle("empty", isEmpty() && !S.logo);
   advise({d:d, fs:m.fs, lh:m.lh, h:h, fits:fits, wrapped:wrapped});
   scalePreview();
+  placeGrabs();
   save();
+}
+
+function showSize(fs){
+  $("#o-fs").textContent = fs.toFixed(1) + "px";
+  $("#o-size").value = Math.min(12, Math.max(6.5, fs)).toFixed(1);
+}
+function showCols(c){
+  $("#o-cw").textContent = c
+    ? [c.c1, c.c2, c.c3].map(v => Math.round(v / TOTAL * 100) + "%").join(" / ") : "—";
 }
 
 /* Rows that must go to reach a target text size (columns held still). */
@@ -725,13 +764,16 @@ function renderEditor(){
     box.append(head);
 
     const body = el("div", {class:"body"});
-    s.credits.forEach((c, ci) => body.append(creditRow(s, si, c, ci)));
-    body.append(el("button", {class:"addrow", onclick:() => {
-      s.credits.push({p:"", r:S.role, c:"", off:false, pin:false});
+    /* newest work goes to the top of its section, so the button sits there too */
+    body.append(el("button", {class:"addrow top", onclick:() => {
+      s.credits.unshift({p:"", r:S.role, c:"", off:false, pin:false});
       renderEditor(); layout();
-      const rows = body.querySelectorAll(".crow");
-      const last = rows[rows.length-1]; if (last) last.querySelector(".in.p").focus();
-    }}, ["+ Add credit to " + (s.name || "section")]));
+      /* renderEditor rebuilt the tree — reach for the new row in the live DOM */
+      const fresh = $("#ed-sections").children[si];
+      const first = fresh && fresh.querySelector(".crow .in.p");
+      if (first) first.focus();
+    }}, ["+ Add credit to top of " + (s.name || "section")]));
+    s.credits.forEach((c, ci) => body.append(creditRow(s, si, c, ci)));
     box.append(body);
     host.append(box);
   });
@@ -740,14 +782,78 @@ function renderEditor(){
 /* =========================================================
    PREVIEW SCALING
    ========================================================= */
+let previewScale = 1;
 function scalePreview(){
   const host = $("#pvhost"), w = host.clientWidth;
   const k = Math.min(1, (w - 28) / PAGE_W);
   const x = Math.max(14, (w - PAGE_W * k) / 2);
+  previewScale = k;
   $("#pagewrap").style.transform = "translate(" + x.toFixed(1) + "px,14px) scale(" + k.toFixed(4) + ")";
   host.style.height = Math.round(PAGE_H * k + 28) + "px";
 }
-addEventListener("resize", scalePreview);
+addEventListener("resize", () => { scalePreview(); placeGrabs(); });
+
+/* =========================================================
+   DRAGGABLE COLUMN DIVIDERS
+   ========================================================= */
+const MIN_COL = {c1:70, c2:44, c3:90};   /* px, out of the 720 usable */
+
+/* The handles live in #pagewrap, not #page, so redrawing the sheet never removes
+   them. Both share an origin, so page-space offsets can be used directly. */
+function placeGrabs(){
+  const legend = page.querySelector(".legend");
+  const c = lastCols;
+  if (!legend || !c) return;
+  const top = legend.offsetTop, height = (PAGE_H - PAD_Y) - top;
+  [[$("#grab1"), c.c1], [$("#grab2"), c.c1 + c.c2]].forEach(([g, x]) => {
+    g.style.left = (PAD_X + x).toFixed(1) + "px";
+    g.style.top = top + "px";
+    g.style.height = height + "px";
+  });
+}
+
+function startColDrag(which, ev){
+  if (isEmpty() && !S.logo) return;
+  ev.preventDefault();
+  const grab = ev.currentTarget;
+  const startX = ev.clientX;
+  const base = {c1:lastCols.c1, c2:lastCols.c2, c3:lastCols.c3};
+  grab.classList.add("on");
+  /* capture is a nicety; the window listeners below are what make the drag reliable
+     once the pointer leaves the 13px handle */
+  try { grab.setPointerCapture(ev.pointerId); } catch (err){}
+
+  const move = e => {
+    let dx = (e.clientX - startX) / (previewScale || 1);
+    /* the pair either side of this divider trade width; the third column holds still */
+    const a = which === 1 ? "c1" : "c2", b = which === 1 ? "c2" : "c3";
+    dx = Math.max(MIN_COL[a] - base[a], Math.min(base[b] - MIN_COL[b], dx));
+    const next = Object.assign({}, base);
+    next[a] = base[a] + dx; next[b] = base[b] - dx;
+    applyCols(next);            /* live: move the columns without rebuilding the sheet */
+    showCols(next);
+    placeGrabs();
+  };
+  const end = e => {
+    try { grab.releasePointerCapture(ev.pointerId); } catch (err){}
+    grab.classList.remove("on");
+    removeEventListener("pointermove", move);
+    removeEventListener("pointerup", end);
+    removeEventListener("pointercancel", end);
+    /* commit as percentages, drop out of auto columns, then refit properly */
+    S.opts.autoCols = false;
+    $("#o-cols").checked = false;
+    S.opts.c1 = lastCols.c1 / TOTAL * 100;
+    S.opts.c2 = lastCols.c2 / TOTAL * 100;
+    S.opts.c3 = lastCols.c3 / TOTAL * 100;
+    layout();
+  };
+  addEventListener("pointermove", move);
+  addEventListener("pointerup", end);
+  addEventListener("pointercancel", end);
+}
+$("#grab1").addEventListener("pointerdown", e => startColDrag(1, e));
+$("#grab2").addEventListener("pointerdown", e => startColDrag(2, e));
 
 /* =========================================================
    IMPORT / EXPORT
@@ -966,6 +1072,13 @@ function syncOpts(){
 }
 $("#o-fit").onchange   = e => { S.opts.autoFit  = e.target.checked; layout(); };
 $("#o-cols").onchange  = e => { S.opts.autoCols = e.target.checked; layout(); };
+/* setting a size by hand means you no longer want it fitted for you */
+$("#o-size").oninput = e => {
+  S.opts.autoFit = false;
+  $("#o-fit").checked = false;
+  S.opts.density = parseFloat(e.target.value) / BASE.fs;
+  layout();
+};
 $("#o-marks").onchange = e => { S.opts.marks    = e.target.checked; layout(); };
 ["name","company","role"].forEach(k => {
   $("#f-" + k).addEventListener("input", e => { S[k] = e.target.value; setSubtitle(); layout(); });
