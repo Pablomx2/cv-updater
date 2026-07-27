@@ -27,13 +27,25 @@ input{font:inherit;color:inherit}
 .btn.primary:hover{background:#fff}
 
 .app{display:grid;grid-template-columns:minmax(420px,1fr) minmax(560px,1.15fr);gap:14px;padding:14px;align-items:start}
-@media (max-width:1080px){.app{grid-template-columns:1fr}}
+@media (max-width:1080px){
+  .app{grid-template-columns:1fr}
+  .left,.right{position:static;max-height:none}
+  .editor,.advisor{max-height:none;overflow:visible}
+}
 
 .pane{background:var(--panel);border:1px solid var(--line);border-radius:10px;min-width:0}
 .pane>h2{margin:0;padding:11px 14px;font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--soft);border-bottom:1px solid var(--line)}
 .pad{padding:12px 14px}
-.editor{max-height:calc(100vh - 92px);overflow:auto}
-.right{position:sticky;top:70px;display:flex;flex-direction:column;gap:14px}
+/* Both columns are their own scroll region, so the preview and the advice stay
+   put while a long credit list is edited. --stick is the columns' natural top,
+   measured from the real topbar: hard-coding it offsets the shorter column by
+   the difference and the two stop lining up. */
+.left,.right{position:sticky;top:var(--stick,63px);display:flex;flex-direction:column;gap:14px;min-width:0}
+.left{max-height:calc(100vh - var(--stick,63px) - 14px)}
+.editor{flex:1 1 auto;overflow:auto;min-height:190px}
+/* vh, not %: a percentage max-height against the auto-height column does not
+   resolve, and the advice panel then crowds out the editor above it */
+.advisor{flex:0 0 auto;max-height:42vh;overflow:auto}
 
 /* ---------- editor ---------- */
 .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
@@ -197,9 +209,9 @@ input{font:inherit;color:inherit}
 @page{size:8.5in 11in;margin:0}
 @media print{
   body{background:#fff}
-  .topbar,.editor,.pvbar,.advisor,.hint,.pane>h2{display:none!important}
+  .topbar,.left,.editor,.pvbar,.advisor,.hint,.pane>h2{display:none!important}
   .app{display:block;padding:0;gap:0}
-  .right{position:static;gap:0}
+  .right{position:static;gap:0;max-height:none}
   .pane{border:none;border-radius:0;background:none}
   #pvhost{padding:0;background:none;border-radius:0;display:block;height:auto!important;overflow:visible;position:static}
   #pagewrap{position:static!important;transform:none!important}
@@ -222,7 +234,8 @@ input{font:inherit;color:inherit}
 </div>
 
 <div class="app">
-  <section class="pane editor">
+  <section class="left">
+    <section class="pane editor">
     <h2>Content</h2>
     <div class="pad">
       <div class="grid3">
@@ -265,9 +278,8 @@ input{font:inherit;color:inherit}
         <button class="addrow" id="add-section">+ Add section</button>
       </div>
     </div>
-  </section>
+    </section>
 
-  <section class="right">
     <div class="pane advisor">
       <h2>Fit &amp; readability</h2>
       <div class="grade"><div class="badge" id="a-badge">—</div><div class="txt" id="a-summary"></div></div>
@@ -275,7 +287,9 @@ input{font:inherit;color:inherit}
       <ul class="advice" id="a-list"></ul>
       <div class="cands" id="a-cands"></div>
     </div>
+  </section>
 
+  <section class="right">
     <div class="pane">
       <h2>One-page preview</h2>
       <div class="pvbar">
@@ -873,6 +887,12 @@ function renderEditor(){
 /* =========================================================
    PREVIEW SCALING
    ========================================================= */
+/* the columns' sticky offset is the topbar's real height plus the app's own padding */
+function measureStick(){
+  document.documentElement.style.setProperty("--stick",
+    (document.querySelector(".topbar").offsetHeight + 14) + "px");
+}
+
 let previewScale = 1;
 function scalePreview(){
   const host = $("#pvhost"), w = host.clientWidth;
@@ -882,7 +902,7 @@ function scalePreview(){
   $("#pagewrap").style.transform = "translate(" + x.toFixed(1) + "px,14px) scale(" + k.toFixed(4) + ")";
   host.style.height = Math.round(PAGE_H * k + 28) + "px";
 }
-addEventListener("resize", () => { scalePreview(); placeGrabs(); });
+addEventListener("resize", () => { measureStick(); scalePreview(); placeGrabs(); });
 
 /* =========================================================
    DRAGGABLE COLUMN DIVIDERS
@@ -1277,7 +1297,7 @@ $("#add-contact").onclick = () => { S.contact.push({text:"", link:""}); renderEd
 $("#add-section").onclick = () => { S.sections.push({name:"NEW SECTION", credits:[]}); renderEditor(); layout(); };
 
 /* ---------- go ---------- */
-syncOpts(); renderEditor(); layout();
+measureStick(); syncOpts(); renderEditor(); layout();
 </script>
 </body>
 </html>
