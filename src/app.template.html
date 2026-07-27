@@ -1046,13 +1046,45 @@ function buildExport(){
 ''].join("\n");
 }
 
-$("#b-export").onclick = () => {
-  if (isEmpty()){ alert("There is no CV to export yet — import one, or start a blank one."); return; }
-  const blob = new Blob([buildExport()], {type:"text/html"});
-  const a = el("a", {href:URL.createObjectURL(blob),
-    download:S.name.replace(/\s+/g,"-").toLowerCase() + "-cv.html"});
+function exportName(){
+  const slug = S.name.trim().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").toLowerCase();
+  return slug ? slug + "-cv.html" : "cv.html";
+}
+function downloadFile(html, name){
+  const blob = new Blob([html], {type:"text/html"});
+  const a = el("a", {href:URL.createObjectURL(blob), download:name});
   document.body.append(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+
+let picking = false;
+$("#b-export").onclick = async () => {
+  /* a second click while the dialog is open would otherwise be refused as
+     "file picker already active" and quietly download a duplicate */
+  if (picking) return;
+  if (isEmpty()){ alert("There is no CV to export yet — import one, or start a blank one."); return; }
+  const html = buildExport(), name = exportName();
+  /* Ask where to put it. Chromium has the picker, including on file://;
+     Firefox and Safari do not, and fall back to a plain download. */
+  if (window.showSaveFilePicker){
+    picking = true;
+    try {
+      const handle = await showSaveFilePicker({
+        suggestedName: name,
+        types: [{description:"HTML document", accept:{"text/html":[".html", ".htm"]}}]
+      });
+      const out = await handle.createWritable();
+      await out.write(html);
+      await out.close();
+      return;
+    } catch (err){
+      /* Cancelling the dialog must not then quietly download the file anyway.
+         Every other failure (no picker in this context, write refused) still
+         owes the user the file they asked for, so it drops through. */
+      if (err && err.name === "AbortError") return;
+    } finally { picking = false; }
+  }
+  downloadFile(html, name);
 };
 $("#b-print").onclick = () => window.print();
 $("#b-clear").onclick = () => {

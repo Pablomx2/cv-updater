@@ -51,7 +51,7 @@ list without losing it; **★** pins a credit so the advisor never suggests cutt
 | | |
 |---|---|
 | **Import HTML…** | Loads a CV back in — a file exported here, or the original bundled artifact download. |
-| **Export HTML** | Writes a clean standalone CV with the fitted column widths and text size baked in. Still hand-editable, still re-importable. |
+| **Export HTML** | Opens a Save As dialogue, then writes a clean standalone CV with the fitted column widths and text size baked in. Still hand-editable, still re-importable. Firefox and Safari have no save picker, so there it downloads to your Downloads folder as before. |
 | **Print / PDF** | Prints just the page. In the print dialog choose **Save as PDF**, paper **US Letter**, margins **None**, and turn **off** headers/footers. |
 | **Clear** | Empties the editor and starts over. Export first if you want to keep what is there. |
 
