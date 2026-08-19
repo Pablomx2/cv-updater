@@ -181,6 +181,7 @@ input{font:inherit;color:inherit}
 #page .lockup{display:flex;flex-direction:column;align-items:flex-end;gap:7px}
 #page .lockup img{height:15px;width:auto;display:block}
 #page .role{font-size:10.5px;font-weight:700;letter-spacing:3.4px;text-transform:uppercase;color:var(--ink);white-space:nowrap}
+#page .union{font-size:8.4px;font-weight:700;letter-spacing:2.6px;text-transform:uppercase;color:var(--soft);white-space:nowrap}
 #page .keyline{height:var(--keyline);background:var(--ink)}
 #page .contact{display:flex;justify-content:space-between;gap:16px;padding-top:6px;font-size:8.6px;letter-spacing:.3px;color:var(--soft);white-space:nowrap}
 #page table{width:100%;table-layout:fixed;border-collapse:collapse;text-align:left}
@@ -331,6 +332,10 @@ input{font:inherit;color:inherit}
         <div class="fld"><label for="f-company">Company</label><input class="in" id="f-company"></div>
         <div class="fld"><label for="f-role">Role</label><input class="in" id="f-role"></div>
       </div>
+      <div class="fld" style="margin-top:14px;max-width:220px">
+        <label for="f-union">IATSE local #</label>
+        <input class="in" id="f-union" placeholder="e.g. 695, 600, 728, 80">
+      </div>
       <div class="fld" style="margin-top:14px"><label>Logo</label></div>
       <div class="logorow">
         <div class="logoprev" id="logo-prev"></div>
@@ -441,7 +446,32 @@ const BASE  = {fs:9.2, lh:12.5, secfs:8.6, secmt:8, legmt:14};
 const GUT   = 10;                    /* column gutter, px */
 const SLACK = 3;                     /* breathing room so a measured-exact fit still fits */
 const KEY   = "cv-updater.v1";
-const JUNIOR = /\b(boom|utility|playback|a2|a\.?2|assistant|add\.?|additional|second|2nd|swing|trainee|intern|pa)\b/i;
+/* How closely a credit's position matches the CV's stated Role, used to flag
+   credits that dilute the headline. Plain equality is too strict — real
+   listings vary in wording project to project ("Sound Mixer" vs "Production
+   Sound Mixer") — so this scores similarity by shared character bigrams
+   (Sørensen–Dice), which tolerates that kind of wording drift without a
+   hand-kept list of job titles, and works for whatever craft is typed into
+   Role rather than assuming everyone is a mixer. */
+const ROLE_MATCH = 0.4;
+function bigrams(s){
+  const out = [];
+  for (let i = 0; i < s.length - 1; i++) out.push(s.slice(i, i+2));
+  return out;
+}
+function similarity(a, b){
+  a = a.trim().toLowerCase(); b = b.trim().toLowerCase();
+  if (!a || !b) return 0;
+  if (a === b) return 1;
+  const A = bigrams(a), B = bigrams(b);
+  if (!A.length || !B.length) return 0;
+  const counts = {};
+  A.forEach(g => counts[g] = (counts[g]||0) + 1);
+  let hits = 0;
+  B.forEach(g => { if (counts[g] > 0){ hits++; counts[g]--; } });
+  return 2 * hits / (A.length + B.length);
+}
+const roleMismatch = c => !!S.role.trim() && !!c.r.trim() && similarity(S.role, c.r) < ROLE_MATCH;
 
 /* ---------- helpers ---------- */
 const $ = s => document.querySelector(s);
@@ -483,6 +513,7 @@ function el(tag, attrs, kids){
 function normalize(d){
   const out = {
     name: dec(d.name||""), company: dec(d.company||""), role: dec(d.role||""),
+    union: dec(d.union||""),
     logo: typeof d.logo === "string" && /^data:image\//i.test(d.logo) ? d.logo : "",
     contact: (d.contact||[]).map(c => typeof c === "string"
       ? {text:dec(c), link:""} : {text:dec(c.text||""), link:c.link||""}),
@@ -523,7 +554,7 @@ function save(){ clearTimeout(saveT); saveT = setTimeout(() => {
 
 const visible = () => S.sections.flatMap(s => s.credits.filter(c => !c.off));
 const totalCredits = () => S.sections.reduce((a,s) => a + s.credits.length, 0);
-const isEmpty = () => !S.name && !S.company && !S.role && !S.contact.length && !totalCredits();
+const isEmpty = () => !S.name && !S.company && !S.role && !S.union && !S.contact.length && !totalCredits();
 
 /* =========================================================
    PAGE RENDERING
@@ -556,7 +587,9 @@ function sheetHTML(d){
     '<div class="head"><div><div class="name">'+esc(d.name)+'</div>' +
     '<div class="company">'+esc(d.company)+"</div></div>" +
     '<div class="lockup">'+(d.logo?'<img src="'+esc(d.logo)+'" alt="">':"")+
-    '<div class="role">'+esc(d.role)+"</div></div></div>" +
+    '<div class="role">'+esc(d.role)+"</div>" +
+    (d.union?'<div class="union">IATSE Local '+esc(d.union)+"</div>":"") +
+    "</div></div>" +
     '<div class="keyline"></div><div class="contact">'+contact+"</div>" +
     '<table class="legend">'+cols+"<tbody><tr><td>PROJECT</td><td>POSITION</td>" +
     "<td>PRODUCTION CO. / PRODUCER / DIRECTOR</td></tr></tbody></table>" + secs + "</div>";
@@ -876,11 +909,11 @@ function advise(st){
     rep.slice(0,3).map(f => esc(firms[f].raw) + " ×" + firms[f].n).join(", ") +
     ". One or two entries per client carries the same signal as four."]);
 
-  const jr = [];
-  S.sections.forEach(s => s.credits.forEach(c => { if (!c.off && !c.pin && JUNIOR.test(c.r)) jr.push(c); }));
-  if (jr.length >= 3 && /mixer/i.test(S.role))
-    tips.push(["w",jr.length+" credits list a non-mixer position ("+
-      Array.from(new Set(jr.map(c=>c.r))).slice(0,3).join(", ")+"). On a Sound Mixer sheet these dilute the " +
+  const mismatched = [];
+  S.sections.forEach(s => s.credits.forEach(c => { if (!c.off && !c.pin && roleMismatch(c)) mismatched.push(c); }));
+  if (mismatched.length >= 3)
+    tips.push(["w",mismatched.length+" credits list a position that doesn't match your role ("+
+      Array.from(new Set(mismatched.map(c=>esc(c.r)))).slice(0,3).join(", ")+"). These dilute the " +
       "headline — keep only the ones whose project name earns its line."]);
 
   $("#a-list").innerHTML = tips.length
@@ -899,7 +932,7 @@ function renderCandidates(needN, wrapped){
     s.credits.forEach((c, ci) => {
       if (c.off || c.pin) return;
       let score = 0; const why = [];
-      if (JUNIOR.test(c.r)) { score += 3; why.push("not a mixer credit"); }
+      if (roleMismatch(c)) { score += 3; why.push("doesn't match your role"); }
       if (wrapKeys[si+":"+ci]) { score += 2; why.push("wraps to 2 lines"); }
       if (c.c.indexOf("/") < 0) { score += 1; why.push("no producer/director"); }
       const pos = s.credits.slice(0, ci).filter(x => !x.off).length;
@@ -1450,7 +1483,7 @@ function buildExport(){
   const P = palette(S.theme);
   const pct = v => (v / TOTAL * 100).toFixed(3) + "%";
   const data = {
-    name:S.name, company:S.company, role:S.role, logo:S.logo,
+    name:S.name, company:S.company, role:S.role, union:S.union, logo:S.logo,
     contact:S.contact.map(x => x.link ? {text:x.text, link:x.link} : {text:x.text}),
     /* hidden credits travel with the file — flagged off, rendered by nothing —
        so the export stays a full record and re-importing gets them all back */
@@ -1576,6 +1609,7 @@ function syncOpts(){
   $("#o-cols").checked = S.opts.autoCols;
   $("#o-marks").checked = S.opts.marks;
   $("#f-name").value = S.name; $("#f-company").value = S.company; $("#f-role").value = S.role;
+  $("#f-union").value = S.union;
   renderLogo();
   renderDesign();
 }
@@ -1592,7 +1626,7 @@ $("#o-size").oninput = e => {
   layoutSoon();
 };
 $("#o-marks").onchange = e => { S.opts.marks    = e.target.checked; layout(); };
-["name","company","role"].forEach(k => {
+["name","company","role","union"].forEach(k => {
   $("#f-" + k).addEventListener("input", e => { S[k] = e.target.value; setSubtitle(); layoutSoon(); });
 });
 $("#add-contact").onclick = () => { S.contact.push({text:"", link:""}); renderEditor(); layout(); };
