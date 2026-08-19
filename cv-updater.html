@@ -537,8 +537,13 @@ const page = $("#page");
 function sheetHTML(d){
   const esc = t => String(t==null?"":t).replace(/[&<>"]/g,
     c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const contact = (d.contact||[]).map(c =>
-    "<div>" + (c.link ? '<a href="'+esc(c.link)+'">'+esc(c.text)+"</a>" : esc(c.text)) + "</div>").join("");
+  /* a bare phone number typed into the contact line should dial out on tap,
+     same as a manually-set tel:/mailto: link — no extra step for the user */
+  const isPhone = t => /^[+]?[\d\s().-]{7,}$/.test(t) && (t.match(/\d/g)||[]).length >= 7;
+  const contact = (d.contact||[]).map(c => {
+    const link = c.link || (isPhone(c.text) ? "tel:"+c.text.replace(/[\s().-]/g,"") : "");
+    return "<div>" + (link ? '<a href="'+esc(link)+'">'+esc(c.text)+"</a>" : esc(c.text)) + "</div>";
+  }).join("");
   const cols = '<colgroup><col style="width:var(--c1)"><col style="width:var(--c2)"><col style="width:var(--c3)"></colgroup>';
   const secs = (d.sections||[]).map((s, si) => {
     const rows = s.credits.map((c, ci) => c.off ? "" :
