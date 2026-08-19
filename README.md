@@ -21,6 +21,13 @@ Drag the ⠿ handle to reorder a credit, including across sections.
 widths by hand, or move the text slider in the preview bar to set the size. Each switches
 the matching checkbox off; tick it again to hand control back.
 
+**On a phone** — the same app, rearranged. **Edit**, **Preview** and **Advice** become tabs
+rather than columns, a credit takes two lines instead of seven columns, and the sheet has a
+**Fit / 100%** switch so you can read the type at its real size and scroll around it. Drag
+the ⠿ handle with a finger to reorder; the column dividers are always visible where there is
+no mouse to hover with. The fitter measures the sheet whichever tab you are on, so the advice
+is the same advice.
+
 **Design** — five presets (Classic, Slate, Warm, Noir, Plain), then paper, text and accent
 colour pickers to go your own way. Everything else in the palette — body text, the faint
 legend, the rules, the surround behind the sheet — is derived from paper and text, so a
@@ -56,13 +63,16 @@ credit's worth of space. Or drag the dividers and set the widths yourself.
 
 Nothing is deleted automatically. The **●** icon hides a credit so you can test a shorter
 list without losing it; **★** pins a credit so the advisor never suggests cutting it.
+A hidden credit stays in the exported file too — carried in its data marked `off`, drawn
+neither on screen nor in the PDF — so the record survives and re-importing brings it back
+still hidden.
 
 ## Buttons
 
 | | |
 |---|---|
 | **Import HTML…** | Loads a CV back in — a file exported here, or the original bundled artifact download. |
-| **Export HTML** | Opens a Save As dialogue, then writes a clean standalone CV with the fitted column widths and text size baked in. Still hand-editable, still re-importable. Firefox and Safari have no save picker, so there it downloads to your Downloads folder as before. |
+| **Export HTML** | Opens a Save As dialogue, then writes a clean standalone CV with the fitted column widths and text size baked in. Hidden credits ride along in the data, unprinted. Still hand-editable, still re-importable. Firefox and Safari have no save picker, so there it downloads to your Downloads folder as before. |
 | **Print / PDF** | Prints just the page. In the print dialog choose **Save as PDF**, paper **US Letter**, margins **None**, and turn **off** headers/footers. |
 | **Clear** | Empties the editor and starts over. Export first if you want to keep what is there. |
 
@@ -81,3 +91,20 @@ node src/build.js
 
 `src/seed.json` is the state the app starts in — deliberately empty, so neither a CV nor
 a logo lives in this repo.
+
+The sheet is drawn by one function, `sheetHTML`, and styled by the `#page` rules in the
+template's stylesheet. **Export serialises that same function into the file it writes and
+copies those same rules**, so the exported CV cannot drift away from the preview — change
+the sheet in one place and both follow.
+
+## Tests
+
+```bash
+node test/roundtrip.js
+```
+
+No dependencies and no build step: the test lifts the functions out of
+`src/app.template.html` by name and exercises the data contract — that hidden and pinned
+credits survive an export and come back on import, that hidden ones are drawn nowhere, that
+older exports and the original artifact bundle still read, and that an imported file cannot
+smuggle code into the data block.
