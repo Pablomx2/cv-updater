@@ -21,17 +21,23 @@ input{font:inherit;color:inherit}
 .topbar{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--ink);color:var(--paper);position:sticky;top:0;z-index:20}
 .topbar h1{font-size:13px;font-weight:700;letter-spacing:2.2px;margin:0;text-transform:uppercase}
 .topbar .sub{font-size:11px;color:#a5a299;letter-spacing:.4px;margin-right:auto}
+.tbtns{display:flex;align-items:center;gap:10px;margin-left:auto}
 .btn{background:transparent;color:var(--paper);border:1px solid #56534b;border-radius:6px;padding:6px 11px;font-size:12px;letter-spacing:.3px;white-space:nowrap}
+/* the long button labels have a short form that only the narrow layout uses */
+.ls{display:none}
 .btn:hover{background:#2e2d29;border-color:#7d7a70}
 .btn.primary{background:var(--paper);color:var(--ink);border-color:var(--paper);font-weight:700}
 .btn.primary:hover{background:#fff}
 
+/* Only the narrow layout shows these; the wide one has every pane on screen at once. */
+.mtabs{display:none;position:sticky;top:var(--stick-bar,52px);z-index:19;
+  background:var(--panel);border-bottom:1px solid var(--line);padding:6px 10px;gap:6px}
+.mtab{flex:1 1 0;border:1px solid var(--line);background:#fff;border-radius:6px;
+  padding:9px 4px;font-size:12px;letter-spacing:.3px;color:var(--soft)}
+.mtab.on{background:var(--ink);border-color:var(--ink);color:var(--paper);font-weight:700}
+
 .app{display:grid;grid-template-columns:minmax(420px,1fr) minmax(560px,1.15fr);gap:14px;padding:14px;align-items:start}
-@media (max-width:1080px){
-  .app{grid-template-columns:1fr}
-  .left,.right{position:static;max-height:none}
-  .editor,.advisor{max-height:none;overflow:visible}
-}
+@media (max-width:1080px){ .app{grid-template-columns:1fr} }
 
 .pane{background:var(--panel);border:1px solid var(--line);border-radius:10px;min-width:0}
 .pane>h2{margin:0;padding:11px 14px;font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--soft);border-bottom:1px solid var(--line)}
@@ -46,6 +52,13 @@ input{font:inherit;color:inherit}
 /* vh, not %: a percentage max-height against the auto-height column does not
    resolve, and the advice panel then crowds out the editor above it */
 .advisor{flex:0 0 auto;max-height:42vh;overflow:auto}
+/* One column: the panes stop being their own scroll regions and simply stack.
+   These have to sit after the rules above, not beside .app's own media query —
+   equal specificity, so source order is what decides. */
+@media (max-width:1080px){
+  .left,.right{position:static;max-height:none}
+  .editor,.advisor{max-height:none;overflow:visible}
+}
 
 /* ---------- editor ---------- */
 .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
@@ -98,7 +111,9 @@ input{font:inherit;color:inherit}
 .crow.drop-before{box-shadow:inset 0 3px 0 var(--ink)}
 .crow.drop-after{box-shadow:inset 0 -3px 0 var(--ink)}
 .crow .in,.ctrow .in{min-width:0}
-.crow .grip{cursor:grab;color:var(--faint);padding:0 2px;user-select:none;font-size:12px;flex:none}
+.crow .grip{cursor:grab;color:var(--faint);padding:0 2px;user-select:none;font-size:12px;flex:none;
+  touch-action:none}   /* or a touch drag scrolls the page instead of reordering */
+.crow.dragging{opacity:.55}
 .crow .in.p{flex:3.2 1 0;font-weight:700}
 .crow .in.r{flex:1.8 1 0}
 .crow .in.c{flex:4 1 0}
@@ -132,7 +147,7 @@ input{font:inherit;color:inherit}
 #pagewrap{position:absolute;top:0;left:0;transform-origin:top left}
 /* column dividers, laid over the preview — shown on hover so the sheet reads clean otherwise */
 .colgrab{position:absolute;width:13px;margin-left:-6px;z-index:5;cursor:col-resize;
-  opacity:0;transition:opacity .12s}
+  opacity:0;transition:opacity .12s;touch-action:none}
 .colgrab::before{content:"";position:absolute;left:6px;top:0;bottom:0;width:1px;background:var(--ink);opacity:.35}
 .colgrab::after{content:"";position:absolute;left:2px;top:-9px;width:9px;height:9px;border-radius:2px;background:var(--ink)}
 #pvhost:hover .colgrab{opacity:.75}
@@ -206,14 +221,79 @@ input{font:inherit;color:inherit}
 .cand button:hover{border-color:var(--ink)}
 .hint{padding:0 14px 12px;font-size:11px;color:var(--faint);line-height:1.5}
 
+/* =========================================================
+   NARROW SCREENS
+   The sheet is 816px wide and the layout engine measures the live DOM, so
+   nothing that holds #page may ever be display:none — see the tab rules.
+   ========================================================= */
+@media (max-width:760px){
+  .app{padding:10px;gap:10px}
+  .pad{padding:10px 11px}
+
+  /* the title keeps one line; four short-labelled buttons take the next */
+  .topbar{flex-wrap:wrap;gap:8px;padding:8px 12px}
+  .topbar h1{font-size:12px;letter-spacing:1.8px}
+  .topbar .sub{font-size:10.5px}
+  .tbtns{flex:1 1 100%;margin-left:0;gap:6px}
+  .tbtns .btn{flex:1 1 0;min-width:0;padding:9px 4px;text-align:center;font-size:11.5px}
+  .lf{display:none} .ls{display:inline}
+
+  /* 16px is the threshold below which iOS Safari zooms the page in on focus */
+  .in{font-size:16px;padding:7px 8px}
+  .ico{min-width:34px;height:34px;font-size:14px}
+  .sec>header .in{font-size:13px}
+  .mini,.addrow{padding:9px 11px}
+  .grid3{grid-template-columns:1fr 1fr}
+
+  /* a credit becomes two lines: project and its actions, then position and company */
+  .crow{flex-wrap:wrap;gap:6px;padding:8px 0}
+  .crow::after{content:"";flex:0 0 100%;height:0;order:4}   /* forces the line break */
+  .crow .grip{order:1;font-size:16px;padding:0 5px}
+  .crow .in.p{order:2;flex:1 1 0}   /* zero basis, or .in's width:100% claims the whole line */
+  .crow .ico{order:3}
+  .crow .in.r{order:5;flex:1 1 38%}
+  .crow .in.c{order:5;flex:1 1 55%}
+
+  .ctrow{flex-wrap:wrap;gap:6px;padding:5px 0}
+  .ctrow .in.t{flex:1 1 100%}
+  .ctrow .in.l{flex:1 1 0}
+
+  /* ---- one pane at a time ---- */
+  .mtabs{display:flex}
+  .app{position:relative}            /* the parked preview measures against this */
+  body.m-edit    .advisor, body.m-edit .hint,
+  body.m-advice  .editor,
+  body.m-preview .editor, body.m-preview .advisor{display:none}
+
+  /* The preview holds #page, and solve() measures #page's live height. Hiding it
+     with display:none would report 0 and convince the fitter that any list fits,
+     silently wrecking the advice. So the parked preview keeps its layout box —
+     out of flow, zero-height and invisible, but still measurable. */
+  body.m-edit .right, body.m-advice .right{
+    position:absolute;left:0;right:0;top:0;height:0;overflow:hidden;
+    visibility:hidden;pointer-events:none}
+}
+
+/* the dividers have no hover to reveal them on a touch screen, and need a
+   target bigger than 13px once a finger is doing the dragging */
+@media (hover:none){
+  #pvhost .colgrab{opacity:.5;width:28px;margin-left:-14px}
+  #pvhost .colgrab::before{left:14px}
+  #pvhost .colgrab::after{left:9px;width:11px;height:11px;top:-11px}
+}
+@media (max-width:430px){ .grid3{grid-template-columns:1fr} }
+
 @page{size:8.5in 11in;margin:0}
 @media print{
   body{background:#fff}
-  .topbar,.left,.editor,.pvbar,.advisor,.hint,.pane>h2{display:none!important}
+  .topbar,.mtabs,.left,.editor,.pvbar,.advisor,.hint,.pane>h2{display:none!important}
   .app{display:block;padding:0;gap:0}
-  .right{position:static;gap:0;max-height:none}
+  .right{position:static!important;gap:0;max-height:none;
+    height:auto!important;overflow:visible!important;visibility:visible!important}
   .pane{border:none;border-radius:0;background:none}
-  #pvhost{padding:0;background:none;border-radius:0;display:block;height:auto!important;overflow:visible;position:static}
+  /* the zoom control writes height and overflow inline, so print has to out-rank it */
+  #pvhost{padding:0;background:none;border-radius:0;display:block;position:static;
+    height:auto!important;overflow:visible!important}
   #pagewrap{position:static!important;transform:none!important}
   #page{box-shadow:none;margin:0}
   #page tr.over td,#page tr.wrap2 td{background:none!important}   /* never print the review marks */
@@ -226,11 +306,19 @@ input{font:inherit;color:inherit}
 <div class="topbar">
   <h1>CV Updater</h1>
   <span class="sub" id="subtitle"></span>
-  <button class="btn" id="b-import">Import HTML…</button>
-  <button class="btn" id="b-clear">Clear</button>
-  <button class="btn" id="b-export">Export HTML</button>
-  <button class="btn primary" id="b-print">Print / PDF</button>
+  <div class="tbtns">
+    <button class="btn" id="b-import"><span class="lf">Import HTML…</span><span class="ls">Import</span></button>
+    <button class="btn" id="b-clear">Clear</button>
+    <button class="btn" id="b-export"><span class="lf">Export HTML</span><span class="ls">Export</span></button>
+    <button class="btn primary" id="b-print"><span class="lf">Print / PDF</span><span class="ls">Print</span></button>
+  </div>
   <input type="file" id="file" accept=".html,.htm,.json" hidden>
+</div>
+
+<div class="mtabs" id="mtabs" role="tablist">
+  <button class="mtab on" data-v="edit" role="tab">Edit</button>
+  <button class="mtab" data-v="preview" role="tab">Preview</button>
+  <button class="mtab" data-v="advice" role="tab">Advice</button>
 </div>
 
 <div class="app">
@@ -239,9 +327,9 @@ input{font:inherit;color:inherit}
     <h2>Content</h2>
     <div class="pad">
       <div class="grid3">
-        <div class="fld"><label>Name</label><input class="in" id="f-name"></div>
-        <div class="fld"><label>Company</label><input class="in" id="f-company"></div>
-        <div class="fld"><label>Role</label><input class="in" id="f-role"></div>
+        <div class="fld"><label for="f-name">Name</label><input class="in" id="f-name"></div>
+        <div class="fld"><label for="f-company">Company</label><input class="in" id="f-company"></div>
+        <div class="fld"><label for="f-role">Role</label><input class="in" id="f-role"></div>
       </div>
       <div class="fld" style="margin-top:14px"><label>Logo</label></div>
       <div class="logorow">
@@ -282,7 +370,7 @@ input{font:inherit;color:inherit}
 
     <div class="pane advisor">
       <h2>Fit &amp; readability</h2>
-      <div class="grade"><div class="badge" id="a-badge">—</div><div class="txt" id="a-summary"></div></div>
+      <div class="grade" aria-live="polite"><div class="badge" id="a-badge">—</div><div class="txt" id="a-summary"></div></div>
       <div class="bars" id="a-bars"></div>
       <ul class="advice" id="a-list"></ul>
       <div class="cands" id="a-cands"></div>
@@ -298,9 +386,12 @@ input{font:inherit;color:inherit}
         <label><input type="checkbox" id="o-marks"> Mark problem rows</label>
         <span class="spacer"></span>
         <label class="sizectl" title="Credit text size — moving this switches auto-fit off">text
-          <input type="range" id="o-size" min="6.5" max="12" step="0.1" value="9.2">
+          <input type="range" id="o-size" min="5" max="12" step="0.1" value="9.2" aria-label="Credit text size">
           <code id="o-fs">9.2px</code>
         </label>
+        <span class="seg" id="o-zoom" title="Preview size">
+          <button data-v="fit" class="on">Fit</button><button data-v="one">100%</button>
+        </span>
         <span>cols <code id="o-cw">—</code></span>
       </div>
       <div id="pvhost"><div id="pagewrap"><div id="page"></div>
@@ -433,25 +524,47 @@ const isEmpty = () => !S.name && !S.company && !S.role && !S.contact.length && !
    ========================================================= */
 const page = $("#page");
 
-function pageHTML(){
-  const contact = S.contact.map(c =>
+/* The one and only renderer for the sheet. It takes its data as an argument and
+   touches nothing else, so buildExport() can serialise this exact function into the
+   exported file — one implementation, drawing the preview and the export alike.
+   Hidden credits are skipped here, and nowhere else. */
+function sheetHTML(d){
+  const esc = t => String(t==null?"":t).replace(/[&<>"]/g,
+    c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const contact = (d.contact||[]).map(c =>
     "<div>" + (c.link ? '<a href="'+esc(c.link)+'">'+esc(c.text)+"</a>" : esc(c.text)) + "</div>").join("");
   const cols = '<colgroup><col style="width:var(--c1)"><col style="width:var(--c2)"><col style="width:var(--c3)"></colgroup>';
-  const secs = S.sections.map((s, si) => {
+  const secs = (d.sections||[]).map((s, si) => {
     const rows = s.credits.map((c, ci) => c.off ? "" :
       '<tr data-k="'+si+":"+ci+'"><td><b>'+esc(c.p)+"</b></td><td>"+esc(c.r)+"</td><td>"+esc(c.c)+"</td></tr>").join("");
-    if (!rows) return "";
+    if (!rows) return "";          /* a section hidden down to nothing prints no heading */
     return '<div class="sline"><div class="slabel">'+esc(s.name)+'</div><div class="srule"></div></div>' +
            '<table class="credits">'+cols+"<tbody>"+rows+"</tbody></table>";
   }).join("");
   return '<div id="sheet">' +
-    '<div class="head"><div><div class="name">'+esc(S.name)+'</div>' +
-    '<div class="company">'+esc(S.company)+"</div></div>" +
-    '<div class="lockup">'+(S.logo?'<img src="'+esc(S.logo)+'" alt="">':"")+
-    '<div class="role">'+esc(S.role)+"</div></div></div>" +
+    '<div class="head"><div><div class="name">'+esc(d.name)+'</div>' +
+    '<div class="company">'+esc(d.company)+"</div></div>" +
+    '<div class="lockup">'+(d.logo?'<img src="'+esc(d.logo)+'" alt="">':"")+
+    '<div class="role">'+esc(d.role)+"</div></div></div>" +
     '<div class="keyline"></div><div class="contact">'+contact+"</div>" +
     '<table class="legend">'+cols+"<tbody><tr><td>PROJECT</td><td>POSITION</td>" +
     "<td>PRODUCTION CO. / PRODUCER / DIRECTOR</td></tr></tbody></table>" + secs + "</div>";
+}
+
+/* The sheet's styling lives once, in this file's own stylesheet. The export lifts
+   those rules straight out of it instead of keeping a second hand-written copy —
+   which is how the two drifted apart in the first place. */
+function sheetRules(){
+  const out = [];
+  for (const sheet of document.styleSheets){
+    let rules;
+    try { rules = sheet.cssRules; } catch (e){ continue; }   /* never throws here, but cheap insurance */
+    for (const r of rules){
+      const sel = r.selectorText && r.selectorText.trim();
+      if (sel && sel !== "#page" && /^#page\b/.test(sel)) out.push("  " + r.cssText);
+    }
+  }
+  return out.join("\n");
 }
 
 /* ---------- text measurement (canvas, for column sizing) ---------- */
@@ -563,9 +676,30 @@ function solve(){
 /* =========================================================
    LAYOUT + ADVICE
    ========================================================= */
-function layout(){
-  page.innerHTML = pageHTML();
+/* Redrawing the sheet is cheap. Fitting it is not: solve() can run two twenty-step
+   binary searches, each step forcing a synchronous reflow of the whole sheet. At a
+   hundred credits that was ~80ms of work per keystroke on a desktop, and several
+   times that on a phone. So the two are separable — see layoutSoon(). */
+function renderSheet(){
+  page.innerHTML = sheetHTML(S);
   applyTheme();                 /* before measuring — the keyline weight moves the text */
+}
+
+let refitT = 0, refitRAF = 0;
+/* Typing redraws the text immediately at the size and columns already in force,
+   and lets the refit catch up once the burst stops. */
+function layoutSoon(){
+  renderSheet();
+  clearTimeout(refitT);
+  refitT = setTimeout(() => {
+    cancelAnimationFrame(refitRAF);
+    refitRAF = requestAnimationFrame(layout);
+  }, 120);
+}
+
+function layout(){
+  clearTimeout(refitT);         /* a direct call satisfies any pending refit */
+  renderSheet();
   const r = solve();
   const d = r.d, fits = r.fits, m = lastM, h = sheetH();
   showSize(m.fs);
@@ -597,7 +731,7 @@ function layout(){
 
 function showSize(fs){
   $("#o-fs").textContent = fs.toFixed(1) + "px";
-  $("#o-size").value = Math.min(12, Math.max(6.5, fs)).toFixed(1);
+  $("#o-size").value = Math.min(12, Math.max(5, fs)).toFixed(1);
 }
 function showCols(c){
   $("#o-cw").textContent = c
@@ -773,10 +907,62 @@ function setSubtitle(){
 
 function bind(node, obj, key){
   node.value = obj[key] || "";
-  node.addEventListener("input", () => { obj[key] = node.value; layout(); });
+  node.addEventListener("input", () => { obj[key] = node.value; layoutSoon(); });
   return node;
 }
 let dragSrc = null;
+
+/* The one place a credit changes position. Both the native drag and the touch
+   drag land here, so the index arithmetic only exists once. */
+function moveCredit(src, si, ci, after){
+  const moved = S.sections[src.si].credits.splice(src.ci, 1)[0];
+  let idx = ci + (after ? 1 : 0);
+  if (src.si === si && src.ci < ci) idx--;
+  S.sections[si].credits.splice(idx, 0, moved);
+  renderEditor(); layout();
+}
+
+/* HTML5 drag-and-drop never fires on a touch screen, so a finger on the handle
+   gets a pointer-driven drag instead: same drop markers, same commit. */
+function startTouchDrag(row, si, ci, ev){
+  ev.preventDefault();
+  const src = {si:si, ci:ci};
+  let target = null, after = false;
+  row.classList.add("dragging");
+  try { row.setPointerCapture(ev.pointerId); } catch (err){}
+
+  const clear = () => document.querySelectorAll(".crow").forEach(r =>
+    r.classList.remove("drop-before","drop-after"));
+
+  const move = e => {
+    e.preventDefault();
+    /* the captured pointer keeps reporting the source row, so hit-test the
+       document for whatever is actually under the finger */
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    const hit = under && under.closest(".crow");
+    clear();
+    target = (hit && hit !== row) ? hit : null;
+    if (target){
+      const r = target.getBoundingClientRect();
+      after = e.clientY >= r.top + r.height / 2;
+      target.classList.add(after ? "drop-after" : "drop-before");
+    }
+    /* keep the list moving when the finger reaches the top or bottom of the screen */
+    if (e.clientY < 70) scrollBy(0, -14);
+    else if (e.clientY > innerHeight - 70) scrollBy(0, 14);
+  };
+  const end = () => {
+    removeEventListener("pointermove", move);
+    removeEventListener("pointerup", end);
+    removeEventListener("pointercancel", end);
+    row.classList.remove("dragging");
+    clear();
+    if (target) moveCredit(src, +target.dataset.si, +target.dataset.ci, after);
+  };
+  addEventListener("pointermove", move, {passive:false});
+  addEventListener("pointerup", end);
+  addEventListener("pointercancel", end);
+}
 
 function creditRow(s, si, c, ci){
   const row = el("div", {class:"crow" + (c.off?" off":"") + (c.pin?" pin":"")});
@@ -784,7 +970,8 @@ function creditRow(s, si, c, ci){
   /* The row is only draggable while the handle is held. A permanently draggable
      row swallows mousedown inside its inputs, so the text cannot be selected. */
   const grip = el("span", {class:"grip", title:"Drag to reorder"}, ["⠿"]);
-  grip.addEventListener("pointerdown", () => {
+  grip.addEventListener("pointerdown", e => {
+    if (e.pointerType !== "mouse"){ startTouchDrag(row, si, ci, e); return; }
     row.draggable = true;
     addEventListener("pointerup", () => { row.draggable = false; }, {once:true});
   });
@@ -792,10 +979,31 @@ function creditRow(s, si, c, ci){
   row.append(bind(el("input", {class:"in p", placeholder:"Project"}), c, "p"));
   row.append(bind(el("input", {class:"in r", placeholder:"Position"}), c, "r"));
   row.append(bind(el("input", {class:"in c", placeholder:"Company / Producer / Director"}), c, "c"));
-  row.append(el("button", {class:"ico"+(c.pin?" on":""), title:"Pin — never suggest cutting this",
-    onclick:() => { c.pin = !c.pin; renderEditor(); layout(); }}, ["★"]));
-  row.append(el("button", {class:"ico"+(c.off?"":" on"), title:c.off?"Show on the CV":"Hide from the CV",
-    onclick:() => { c.off = !c.off; renderEditor(); layout(); }}, [c.off ? "○" : "●"]));
+  /* Toggling used to rebuild the entire editor, which threw away the scroll
+     position — a jump to the top of the list on every tap. Touch just this row. */
+  const pinBtn = el("button", {class:"ico"+(c.pin?" on":""), "aria-pressed":c.pin?"true":"false",
+    title:"Pin — never suggest cutting this",
+    onclick:() => {
+      c.pin = !c.pin;
+      row.classList.toggle("pin", c.pin);
+      pinBtn.classList.toggle("on", c.pin);
+      pinBtn.setAttribute("aria-pressed", c.pin ? "true" : "false");
+      layout();
+    }}, ["★"]);
+  const offBtn = el("button", {class:"ico"+(c.off?"":" on"), "aria-pressed":c.off?"true":"false",
+    title:c.off?"Show on the CV":"Hide from the CV",
+    onclick:() => {
+      c.off = !c.off;
+      row.classList.toggle("off", c.off);
+      offBtn.classList.toggle("on", !c.off);
+      offBtn.textContent = c.off ? "○" : "●";
+      offBtn.title = c.off ? "Show on the CV" : "Hide from the CV";
+      offBtn.setAttribute("aria-pressed", c.off ? "true" : "false");
+      const box = row.closest(".sec"), cnt = box && box.querySelector(".count");
+      if (cnt) cnt.textContent = s.credits.filter(x => !x.off).length + " shown";
+      layout();
+    }}, [c.off ? "○" : "●"]);
+  row.append(pinBtn, offBtn);
   row.append(el("button", {class:"ico del", title:"Delete",
     onclick:() => { s.credits.splice(ci,1); renderEditor(); layout(); }}, ["✕"]));
 
@@ -819,16 +1027,16 @@ function creditRow(s, si, c, ci){
     const after = row.classList.contains("drop-after");
     row.classList.remove("drop-before","drop-after");
     if (!dragSrc) return;
-    const moved = S.sections[dragSrc.si].credits.splice(dragSrc.ci, 1)[0];
-    let idx = ci + (after ? 1 : 0);
-    if (dragSrc.si === si && dragSrc.ci < ci) idx--;
-    S.sections[si].credits.splice(idx, 0, moved);
-    dragSrc = null; renderEditor(); layout();
+    const src = dragSrc; dragSrc = null;
+    moveCredit(src, si, ci, after);
   });
   return row;
 }
 
 function renderEditor(){
+  /* adding, deleting and importing all rebuild the tree; none of them should
+     throw the reader back to the top of a long list */
+  const y = scrollY;
   setSubtitle();
 
   const ct = $("#ed-contact"); ct.innerHTML = "";
@@ -884,6 +1092,7 @@ function renderEditor(){
     box.append(body);
     host.append(box);
   });
+  if (scrollY !== y) scrollTo(0, y);
 }
 
 /* =========================================================
@@ -891,20 +1100,57 @@ function renderEditor(){
    ========================================================= */
 /* the columns' sticky offset is the topbar's real height plus the app's own padding */
 function measureStick(){
-  document.documentElement.style.setProperty("--stick",
-    (document.querySelector(".topbar").offsetHeight + 14) + "px");
+  const bar = document.querySelector(".topbar").offsetHeight;
+  const st = document.documentElement.style;
+  st.setProperty("--stick-bar", bar + "px");          /* the tab strip sits right under it */
+  st.setProperty("--stick", (bar + 14) + "px");
 }
 
-let previewScale = 1;
+let previewScale = 1, zoomMode = "fit";
 function scalePreview(){
   const host = $("#pvhost"), w = host.clientWidth;
-  const k = Math.min(1, (w - 28) / PAGE_W);
+  const k = zoomMode === "fit" ? Math.min(1, (w - 28) / PAGE_W) : 1;
   const x = Math.max(14, (w - PAGE_W * k) / 2);
   previewScale = k;
   $("#pagewrap").style.transform = "translate(" + x.toFixed(1) + "px,14px) scale(" + k.toFixed(4) + ")";
-  host.style.height = Math.round(PAGE_H * k + 28) + "px";
+  const full = Math.round(PAGE_H * k + 28);
+  if (zoomMode === "fit"){
+    host.style.overflow = "hidden";
+    host.style.height = full + "px";
+  } else {
+    /* at 100% the sheet is deliberately larger than its box — the box scrolls,
+       and is capped to what is left of the viewport below it */
+    host.style.overflow = "auto";
+    const room = Math.round(innerHeight - host.getBoundingClientRect().top - 24);
+    host.style.height = Math.max(320, Math.min(full, room)) + "px";
+  }
 }
+$("#o-zoom").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  zoomMode = b.dataset.v === "one" ? "one" : "fit";
+  $("#o-zoom").querySelectorAll("button").forEach(x => x.classList.toggle("on", x.dataset.v === b.dataset.v));
+  scalePreview(); placeGrabs();
+});
 addEventListener("resize", () => { measureStick(); scalePreview(); placeGrabs(); });
+
+/* ---------- one pane at a time, on a narrow screen ---------- */
+const narrow = () => matchMedia("(max-width:760px)").matches;
+let tab = "edit";
+function setTab(v){
+  tab = v;
+  document.body.classList.remove("m-edit","m-preview","m-advice");
+  document.body.classList.add("m-" + v);
+  $("#mtabs").querySelectorAll("button").forEach(b => {
+    const on = b.dataset.v === v;
+    b.classList.toggle("on", on);
+    b.setAttribute("aria-selected", on ? "true" : "false");
+  });
+  /* the preview was parked out of flow — it needs re-measuring now it is back */
+  scalePreview(); placeGrabs();
+}
+$("#mtabs").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (b) setTab(b.dataset.v);
+});
 
 /* =========================================================
    DRAGGABLE COLUMN DIVIDERS
@@ -992,8 +1238,20 @@ function extractCV(text){
     else if (ch === "}" && --depth === 0){ end = j + 1; break; }
   }
   if (end < 0) throw new Error("The CV data block looks incomplete.");
-  const lit = text.slice(start, end);
-  try { return JSON.parse(lit); } catch(e){ return Function("return (" + lit + ")")(); }
+  return parseLiteral(text.slice(start, end));
+}
+
+/* The data block is meant to stay hand-editable, so shapes JSON rejects — single
+   quotes, unquoted keys, a trailing comma — are worth accepting. Executable syntax
+   is not: an imported file is untrusted, and Function() would run whatever it found
+   there. Blank out the strings, then refuse anything left that could call, assign
+   or template its way into running code. */
+function parseLiteral(lit){
+  try { return JSON.parse(lit); } catch (e){}
+  const bare = lit.replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g, '""');
+  if (/[()`;=]|\b(?:function|new|class|import|await|yield)\b/.test(bare))
+    throw new Error("That file's CV block contains code, not just data — refusing to run it.");
+  return Function("return (" + lit + ")")();
 }
 
 /* =========================================================
@@ -1118,10 +1376,14 @@ $("#file").onchange = e => {
       const isJson = !!f.name.match(/\.json$/i);
       const data = isJson ? JSON.parse(txt) : extractCV(txt);
       S = normalize(data);
-      /* the file's own logo wins; importing a CV without one clears the old logo
-         rather than leaving the previous CV's mark on it */
-      if (!isJson) S.logo = extractLogo(txt) || "";
+      /* Exports from here carry the logo inside the data. Older exports and the
+         original artifact bundle only have it as an <img>, so dig it out of the
+         markup when the data had none. Either way a CV without a logo clears the
+         old one rather than leaving the previous CV's mark on it. */
+      if (!isJson && !S.logo) S.logo = extractLogo(txt) || "";
       syncOpts(); renderEditor(); layout();
+      /* the point of importing is to see the sheet, which is behind a tab here */
+      if (narrow()) setTab("preview");
     } catch (err){ alert("Could not read that file.\n\n" + err.message); }
   };
   rd.readAsText(f);
@@ -1138,10 +1400,13 @@ function buildExport(){
   const P = palette(S.theme);
   const pct = v => (v / TOTAL * 100).toFixed(3) + "%";
   const data = {
-    name:S.name, company:S.company, role:S.role,
+    name:S.name, company:S.company, role:S.role, logo:S.logo,
     contact:S.contact.map(x => x.link ? {text:x.text, link:x.link} : {text:x.text}),
+    /* hidden credits travel with the file — flagged off, rendered by nothing —
+       so the export stays a full record and re-importing gets them all back */
     sections:S.sections.map(s => ({name:s.name,
-      credits:s.credits.filter(x => !x.off).map(x => ({p:x.p, r:x.r, c:x.c}))}))
+      credits:s.credits.map(x => Object.assign({p:x.p, r:x.r, c:x.c},
+        x.off ? {off:true} : null, x.pin ? {pin:true} : null))}))
         .filter(s => s.credits.length),
     theme:S.theme,      /* so re-importing brings the look back, not just the words */
     opts:{autoFit:S.opts.autoFit, autoCols:S.opts.autoCols, target:S.opts.target}
@@ -1150,72 +1415,54 @@ function buildExport(){
 '<!DOCTYPE html>',
 '<html lang="en"><head>',
 '<meta charset="utf-8">',
+'<meta name="viewport" content="width=device-width,initial-scale=1">',
 '<title>' + esc(S.name.replace(/\b(\w)(\w*)/g, (m,a,b) => a + b.toLowerCase())) + ' — ' + esc(S.role) + ' CV</title>',
 '<style>',
-'  :root{--paper:' + P.paper + ';--ink-strong:' + P.ink + ';--ink-body:' + P.body +
-  ';--ink-soft:' + P.soft + ';--ink-faint:' + P.faint + ';--rule:' + P.rule +
-  ';--accent:' + P.accent + '}',
 '  *{box-sizing:border-box}',
 '  body{margin:0;background:' + P.surround + ';font-family:\'Helvetica Neue\',Helvetica,Arial,sans-serif;',
 '    -webkit-print-color-adjust:exact;print-color-adjust:exact}',
-'  #page{width:816px;height:1056px;margin:40px auto;padding:40px 48px;background:var(--paper);',
-'    color:var(--ink-body);overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.45)}',
-'  a{color:inherit;text-decoration:none} a:hover{text-decoration:underline}',
-'  .head{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:9px}',
-'  .name{font-size:31px;font-weight:700;letter-spacing:-.6px;line-height:1;color:var(--ink-strong);white-space:nowrap}',
-'  .company{font-size:8.4px;font-weight:700;letter-spacing:2.6px;color:var(--ink-soft);margin-top:5px;white-space:nowrap}',
-'  .lockup{display:flex;flex-direction:column;align-items:flex-end;gap:7px}',
-'  .lockup img{height:15px;width:auto;display:block}',
-'  .role{font-size:10.5px;font-weight:700;letter-spacing:3.4px;text-transform:uppercase;color:var(--ink-strong);white-space:nowrap}',
-'  .keyline{height:' + S.theme.keyline + 'px;background:var(--ink-strong)}',
-'  .contact{display:flex;justify-content:space-between;gap:16px;padding-top:6px;font-size:8.6px;',
-'    letter-spacing:.3px;color:var(--ink-soft);white-space:nowrap}',
-'  table{width:100%;table-layout:fixed;border-collapse:collapse;text-align:left}',
-'  td{padding:0 10px 0 0;vertical-align:top} td:last-child{padding-right:0}',
-'  col.c1{width:' + pct(c.c1) + '} col.c2{width:' + pct(c.c2) + '} col.c3{width:' + pct(c.c3) + '}',
-'  .legend{margin-top:' + legmt.toFixed(1) + 'px;font-size:7.2px;letter-spacing:1.4px;color:var(--ink-faint)}',
-'  .credits{font-size:' + fs.toFixed(2) + 'px;line-height:' + lh.toFixed(2) + 'px;font-weight:400}',
-'  .credits b{font-weight:700}',
-'  .sec{display:flex;align-items:baseline;gap:7px;margin:' + secmt.toFixed(1) + 'px 0 2px}',
-'  .sec-label{font-size:' + secfs.toFixed(2) + 'px;font-weight:700;letter-spacing:1.6px;color:var(--accent);white-space:nowrap}',
-'  .sec-rule{flex:1;height:1px;background:' + (S.theme.dividers ? 'var(--rule)' : 'none') + '}',
+  /* Everything the sheet needs, carried on the sheet itself: the palette, the
+     fitted type and the fitted columns. The rules under it are the app's own. */
+'  #page{width:816px;height:1056px;margin:40px auto;padding:40px 48px;overflow:hidden;',
+'    background:var(--paper);color:var(--body);box-shadow:0 18px 50px rgba(0,0,0,.45);',
+'    --paper:' + P.paper + ';--ink:' + P.ink + ';--body:' + P.body + ';--soft:' + P.soft + ';',
+'    --faint:' + P.faint + ';--rule:' + P.rule + ';--accent:' + S.theme.accent + ';',
+'    --keyline:' + S.theme.keyline + 'px;',
+'    --fs:' + fs.toFixed(2) + 'px;--lh:' + lh.toFixed(2) + 'px;--secfs:' + secfs.toFixed(2) + 'px;',
+'    --secmt:' + secmt.toFixed(1) + 'px;--legmt:' + legmt.toFixed(1) + 'px;',
+'    --c1:' + pct(c.c1) + ';--c2:' + pct(c.c2) + ';--c3:' + pct(c.c3) + '}',
+sheetRules(),
 '  @page{size:8.5in 11in;margin:0}',
-'  @media print{body{background:none}#page{margin:0;box-shadow:none}}',
+'  @media print{body{background:none}#page{margin:0;box-shadow:none}',
+'    #page tr.over td,#page tr.wrap2 td{background:none!important}}',
+'  @media (max-width:900px){body{background:' + P.paper + '}',
+'    #page{margin:0;box-shadow:none;transform-origin:top left}}',
 '</style>',
 '</head>',
 '<body>',
-'<div id="page">',
-'  <div class="head">',
-'    <div><div class="name" id="f-name"></div><div class="company" id="f-company"></div></div>',
-'    <div class="lockup">' + (S.logo ? '<img src="' + esc(S.logo) + '" alt="">' : "") +
-  '<div class="role" id="f-role"></div></div>',
-'  </div>',
-'  <div class="keyline"></div>',
-'  <div class="contact" id="f-contact"></div>',
-'  <table class="legend"><colgroup><col class="c1"><col class="c2"><col class="c3"></colgroup>',
-'    <tbody><tr><td>PROJECT</td><td>POSITION</td><td>PRODUCTION CO. / PRODUCER / DIRECTOR</td></tr></tbody></table>',
-'  <div id="f-sections"></div>',
-'</div>',
+'<div id="page"' + (S.theme.dividers ? "" : ' class="nodiv"') + '></div>',
 '',
 '<script>',
 '/* Generated by CV Updater on ' + new Date().toISOString().slice(0,10) + '.',
 '   Column widths and text size above were fitted to one page for this exact list.',
+'   Credits marked "off" are kept for reference and are not drawn on the sheet.',
 '   Edit the data below by hand, or re-open this file in CV Updater with "Import HTML". */',
 'const CV = ' + JSON.stringify(data, null, 2).replace(/<\//g, "<\\/") + ';',
 '',
-'const esc = t => String(t == null ? "" : t).replace(/[&<>"]/g,',
-'  c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\\"":"&quot;"}[c]));',
-'document.getElementById("f-name").textContent = CV.name;',
-'document.getElementById("f-company").textContent = CV.company;',
-'document.getElementById("f-role").textContent = CV.role;',
-'document.getElementById("f-contact").innerHTML = CV.contact.map(c =>',
-'  "<div>" + (c.link ? "<a href=\\"" + esc(c.link) + "\\">" + esc(c.text) + "</a>" : esc(c.text)) + "</div>").join("");',
-'document.getElementById("f-sections").innerHTML = CV.sections.map(s =>',
-'  "<div class=\\"sec\\"><div class=\\"sec-label\\">" + esc(s.name) + "</div><div class=\\"sec-rule\\"></div></div>" +',
-'  "<table class=\\"credits\\"><colgroup><col class=\\"c1\\"><col class=\\"c2\\"><col class=\\"c3\\"></colgroup><tbody>" +',
-'  s.credits.map(r => "<tr><td><b>" + esc(r.p) + "</b></td><td>" + esc(r.r) + "</td><td>" + esc(r.c) + "</td></tr>").join("") +',
-'  "</tbody></table>").join("");',
+'/* the app\'s own renderer, copied in whole so the sheet is drawn by one function */',
+"const sheetHTML = " + sheetHTML.toString().replace(/<\//g, "<\\/") + ";",
+'document.getElementById("page").innerHTML = sheetHTML(CV);',
+'',
+'/* the sheet is 816px wide; on a narrow screen scale it down rather than clip it */',
+'function fitViewport(){',
+'  const p = document.getElementById("page");',
+'  const k = Math.min(1, document.documentElement.clientWidth / 816);',
+'  p.style.transform = k < 1 ? "scale(" + k.toFixed(4) + ")" : "";',
+'  document.body.style.height = k < 1 ? Math.ceil(1056 * k) + "px" : "";',
+'}',
+'addEventListener("resize", fitViewport);',
 'addEventListener("load", () => {',
+'  fitViewport();',
 '  const p = document.getElementById("page");',
 '  if (p.scrollHeight > p.clientHeight + 2)',
 '    console.warn("CV overflows one page by " + (p.scrollHeight - p.clientHeight) + "px.");',
@@ -1289,17 +1536,20 @@ $("#o-size").oninput = e => {
   S.opts.autoFit = false;
   $("#o-fit").checked = false;
   S.opts.density = parseFloat(e.target.value) / BASE.fs;
-  layout();
+  /* the type resizes under the thumb; the column re-measure can wait for the pause */
+  applyDensity(S.opts.density);
+  $("#o-fs").textContent = (BASE.fs * S.opts.density).toFixed(1) + "px";
+  layoutSoon();
 };
 $("#o-marks").onchange = e => { S.opts.marks    = e.target.checked; layout(); };
 ["name","company","role"].forEach(k => {
-  $("#f-" + k).addEventListener("input", e => { S[k] = e.target.value; setSubtitle(); layout(); });
+  $("#f-" + k).addEventListener("input", e => { S[k] = e.target.value; setSubtitle(); layoutSoon(); });
 });
 $("#add-contact").onclick = () => { S.contact.push({text:"", link:""}); renderEditor(); layout(); };
 $("#add-section").onclick = () => { S.sections.push({name:"NEW SECTION", credits:[]}); renderEditor(); layout(); };
 
 /* ---------- go ---------- */
-measureStick(); syncOpts(); renderEditor(); layout();
+measureStick(); syncOpts(); renderEditor(); layout(); setTab("edit");
 </script>
 </body>
 </html>
