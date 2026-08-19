@@ -591,25 +591,47 @@ function computeCols(fs){
   const w3 = rows.map(r => mctx.measureText(r.c).width);
   mctx.font = FONT(700, 7.2);
   const legend = Math.max(mctx.measureText("PROJECT").width, 40);
+  const m1 = Math.max.apply(null, w1), m2 = Math.max.apply(null, w2), m3 = Math.max.apply(null, w3);
 
   /* the position column is sized to its longest entry, so it needs a little slack —
      sized to exactly the measured width, sub-pixel rounding tips it into wrapping */
-  const c2 = Math.min(Math.max(Math.max.apply(null, w2), 46) + GUT + SLACK, TOTAL * 0.24);
-  const a2 = c2 - GUT;
-  const R  = TOTAL - c2;
-  let best = null;
-  for (let c1 = Math.round(R*0.28); c1 <= Math.round(R*0.72); c1 += 2){
-    const a1 = c1 - GUT, a3 = R - c1;
-    if (a1 < legend + 20 || a3 < 90) continue;
-    let lines = 0;
-    for (let i = 0; i < rows.length; i++){
-      lines += Math.max(Math.ceil(w1[i]/a1) || 1, Math.ceil(w2[i]/a2) || 1, Math.ceil(w3[i]/a3) || 1);
+  const c2min = Math.min(Math.max(m2, 46) + GUT + SLACK, TOTAL * 0.24);
+
+  /* Balance c1/c3 for a fixed c2: minimise wrapped lines first, then tie-break on
+     leaving comparable breathing room between the two text columns. */
+  function balance(c2){
+    const a2 = c2 - GUT, R = TOTAL - c2;
+    let best = null;
+    for (let c1 = Math.round(R*0.28); c1 <= Math.round(R*0.72); c1 += 2){
+      const a1 = c1 - GUT, a3 = R - c1;
+      if (a1 < legend + 20 || a3 < 90) continue;
+      let lines = 0;
+      for (let i = 0; i < rows.length; i++){
+        lines += Math.max(Math.ceil(w1[i]/a1) || 1, Math.ceil(w2[i]/a2) || 1, Math.ceil(w3[i]/a3) || 1);
+      }
+      const bal = Math.abs(m1/a1 - m3/a3);
+      if (!best || lines < best.lines || (lines === best.lines && bal < best.bal))
+        best = {c1:c1, lines:lines, bal:bal};
     }
-    /* tie-break: leave comparable breathing room on both text columns */
-    const bal = Math.abs(Math.max.apply(null,w1)/a1 - Math.max.apply(null,w3)/a3);
-    if (!best || lines < best.lines || (lines === best.lines && bal < best.bal))
-      best = {c1:c1, lines:lines, bal:bal};
+    return best;
   }
+
+  let c2 = c2min, best = balance(c2);
+  /* c2 above was sized to its own content alone, so once c1 and c3 split whatever's
+     left over between them it ends up far tighter than either — the row reads as
+     cramped in the middle, loose at both ends. Give c2 the same fill ratio c1/c3
+     settled on (still capped, so one long outlier position can't hog the row) and
+     re-balance c1/c3 against the smaller remainder. */
+  if (best){
+    const a1 = best.c1 - GUT, a3 = (TOTAL - c2) - best.c1;
+    const fill = (m1/a1 + m3/a3) / 2;
+    const fair = Math.min(Math.max(m2, 46) / fill + GUT, TOTAL * 0.24);
+    if (fair > c2 + 0.5){
+      const rebalanced = balance(fair);
+      if (rebalanced){ c2 = fair; best = rebalanced; }
+    }
+  }
+  const R = TOTAL - c2;
   if (!best) return {c1:R*0.42, c2:c2, c3:R*0.58, lines:rows.length};
   return {c1:best.c1, c2:c2, c3:R - best.c1, lines:best.lines};
 }
@@ -1120,7 +1142,24 @@ function measureStick(){
 let previewScale = 1, zoomMode = "fit";
 function scalePreview(){
   const host = $("#pvhost"), w = host.clientWidth;
-  const k = zoomMode === "fit" ? Math.min(1, (w - 28) / PAGE_W) : 1;
+  let k = 1;
+  if (zoomMode === "fit"){
+    k = Math.min(1, (w - 28) / PAGE_W);
+    /* Below 1080px the columns stack and scroll normally (see the layout media
+       query), so there's no "above the fold" to fit into — width is all that
+       matters there, same as before. Above it, .right is sticky and capped to
+       the viewport, so width alone let the sheet render taller than the window
+       has room for: "fit" still needed a scroll to reach the bottom of a page
+       that was supposedly fit already. Shrink for the viewport's height too,
+       accounting for the usage hint that sits right below this pane in the
+       same column — or the sheet would "fit" only to push that text off screen. */
+    if (matchMedia("(min-width:1081px)").matches){
+      const hint = document.querySelector(".right .hint");
+      const reserve = hint ? hint.getBoundingClientRect().height + 14 : 0;
+      const room = innerHeight - host.getBoundingClientRect().top - 24 - reserve;
+      k = Math.max(0.3, Math.min(k, (room - 28) / PAGE_H));
+    }
+  }
   const x = Math.max(14, (w - PAGE_W * k) / 2);
   previewScale = k;
   $("#pagewrap").style.transform = "translate(" + x.toFixed(1) + "px,14px) scale(" + k.toFixed(4) + ")";
